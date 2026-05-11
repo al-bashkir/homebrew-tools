@@ -9,6 +9,7 @@ class SshTui < Formula
 
   def install
     system "go", "build", *std_go_args(output: bin/"ssh-tui"), "./cmd/ssh-tui"
+    generate_completions_from_executable(bin/"ssh-tui", "completion", shells: [:bash, :zsh])
   end
 
   test do
