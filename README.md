@@ -13,6 +13,11 @@ tap "al-bashkir/tools"
 brew "<formula>"
 ```
 
+## Formulae
+
+- **envio** — modern, secure CLI for managing environment variables. `brew install al-bashkir/tools/envio`
+- **ssh-tui** — TUI for managing SSH connections. `brew install al-bashkir/tools/ssh-tui`
+
 ## Documentation
 
 `brew help`, `man brew` or check [Homebrew's documentation](https://docs.brew.sh).
