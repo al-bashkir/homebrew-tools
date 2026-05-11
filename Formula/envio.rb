@@ -1,8 +1,8 @@
 class Envio < Formula
   desc "Modern and secure CLI tool for managing environment variables"
   homepage "https://github.com/al-bashkir/envio"
-  url "https://github.com/al-bashkir/envio/archive/refs/tags/v0.6.3.tar.gz"
-  sha256 "71fece9784a7a5f9ee2688a141b6f2ca8fa8c348e928b7d810e5167687acb103"
+  url "https://github.com/al-bashkir/envio/archive/refs/tags/v0.6.5.tar.gz"
+  sha256 "d146772fb14db28c26e4f4b5854c60633d3a8e55ae841b12a29cfd0df46a73c9"
   license any_of: ["MIT", "Apache-2.0"]
 
   depends_on "rust" => :build
