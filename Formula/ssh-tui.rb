@@ -3,7 +3,7 @@ class SshTui < Formula
   homepage "https://github.com/al-bashkir/ssh-tui"
   url "https://github.com/al-bashkir/ssh-tui/archive/refs/tags/v1.3.1.tar.gz"
   sha256 "6a107ccd9bec1aa30da7eb029192f48e845a1df7c1fbd95923e24d5534facd49"
-  license :cannot_represent
+  license "MIT"
 
   depends_on "go" => :build
 
