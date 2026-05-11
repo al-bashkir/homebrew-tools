@@ -18,8 +18,8 @@ class Envio < Formula
     depends_on "libgpg-error"
 
     on_arm do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.5/envio-v0.6.5-aarch64-apple-darwin.tar.gz"
-      sha256 "4849079295e407f135af5cf023b7b1954b927f93c67d1be73178afeb21ed8ece"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-apple-darwin.tar.gz"
+      sha256 "652a27e184ee2884f5c82ceccbb0c9e19f1d1e9e704e07193cf6edd2d4ee0d0b"
     end
     on_intel do
       # No upstream x86_64-apple-darwin asset. `depends_on arch: :arm64` above
@@ -27,19 +27,19 @@ class Envio < Formula
       # fetched. The arm64 URL is reused only so the formula passes the
       # tap-syntax check on Intel macOS runners. Replace with a real x86_64
       # URL and drop the arch dep once envio CICD.yml builds one.
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.5/envio-v0.6.5-aarch64-apple-darwin.tar.gz"
-      sha256 "4849079295e407f135af5cf023b7b1954b927f93c67d1be73178afeb21ed8ece"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-apple-darwin.tar.gz"
+      sha256 "652a27e184ee2884f5c82ceccbb0c9e19f1d1e9e704e07193cf6edd2d4ee0d0b"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.5/envio-v0.6.5-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "947006163f4af96e6b30f753360c9675133c6f13f7c0124cce012be652ddde81"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-unknown-linux-gnu.tar.gz"
+      sha256 "87eae40802ffb86156baa52a581282a62ece59d551ad1eead35533dc7c79b858"
     end
     on_intel do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.5/envio-v0.6.5-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "6667000bcb40a2ee23801a271732ab7d68209b4b98df2ca1d68f4bbc2a21838c"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "d43e760ca5d78d76d3bf9083200c8df774422be9a2d1f9f24882f1ec348441da"
     end
   end
 
