@@ -18,8 +18,8 @@ class Envio < Formula
     depends_on "libgpg-error"
 
     on_arm do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-apple-darwin.tar.gz"
-      sha256 "652a27e184ee2884f5c82ceccbb0c9e19f1d1e9e704e07193cf6edd2d4ee0d0b"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.7.0/envio-v0.7.0-aarch64-apple-darwin.tar.gz"
+      sha256 "10bf677e550527dbf73215d10ccb986bfa096ab01c3a152409440d81be22f942"
     end
     on_intel do
       # No upstream x86_64-apple-darwin asset. `depends_on arch: :arm64` above
@@ -27,19 +27,19 @@ class Envio < Formula
       # fetched. The arm64 URL is reused only so the formula passes the
       # tap-syntax check on Intel macOS runners. Replace with a real x86_64
       # URL and drop the arch dep once envio CICD.yml builds one.
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-apple-darwin.tar.gz"
-      sha256 "652a27e184ee2884f5c82ceccbb0c9e19f1d1e9e704e07193cf6edd2d4ee0d0b"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.7.0/envio-v0.7.0-aarch64-apple-darwin.tar.gz"
+      sha256 "10bf677e550527dbf73215d10ccb986bfa096ab01c3a152409440d81be22f942"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "87eae40802ffb86156baa52a581282a62ece59d551ad1eead35533dc7c79b858"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.7.0/envio-v0.7.0-aarch64-unknown-linux-gnu.tar.gz"
+      sha256 "125366eae47c3273b6aa4abd82e2263344745a506379e58398aeb95a2c8c9eda"
     end
     on_intel do
-      url "https://github.com/al-bashkir/envio/releases/download/v0.6.6/envio-v0.6.6-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "d43e760ca5d78d76d3bf9083200c8df774422be9a2d1f9f24882f1ec348441da"
+      url "https://github.com/al-bashkir/envio/releases/download/v0.7.0/envio-v0.7.0-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "c6a4706db83b3a868867a246e7ad355ed88db7b595164d272aa66160e78a2c13"
     end
   end
 
