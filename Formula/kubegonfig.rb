@@ -28,6 +28,7 @@ class Kubegonfig < Formula
 
   def install
     bin.install Dir["kubegonfig-*"].first => "kubegonfig"
+    (bin/"kubegonfig").chmod 0555 # bare release binary ships without the exec bit
     generate_completions_from_executable(bin/"kubegonfig", "completion", shells: [:bash, :zsh])
   end
 
