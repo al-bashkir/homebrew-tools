@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-Standard Homebrew third-party tap (`al-bashkir/tools`) shipping two prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
+Standard Homebrew third-party tap (`al-bashkir/tools`) shipping three prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
 
-- `Formula/envio.rb` — Rust CLI from `al-bashkir/envio`. Per-platform binaries pulled from the upstream `CICD.yml` release assets.
-- `Formula/ssh-tui.rb` — Go TUI from `al-bashkir/ssh-tui`. Per-platform binaries pulled from the upstream `release.yml` release assets.
+- `Formula/envio.rb` — Rust CLI from `al-bashkir/envio`. Per-platform tarballs pulled from the upstream `CICD.yml` release assets.
+- `Formula/ssh-tui.rb` — Go TUI from `al-bashkir/ssh-tui`. Per-platform tarballs pulled from the upstream `release.yml` release assets.
+- `Formula/kubegonfig.rb` — Kubernetes-config tool from `al-bashkir/kubegonfig`. Per-platform **bare binaries** (no tarball) pulled from the upstream release assets.
 
 Users install with `brew install al-bashkir/tools/<formula>`. **No Homebrew bottles, no `brew pr-pull`.** The prebuilt binary downloaded from the upstream release IS the precompiled artifact.
 
@@ -62,6 +63,7 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
 1. Wait for the upstream release CI to finish publishing assets:
    - envio: `al-bashkir/envio` → `.github/workflows/CICD.yml` builds 3 tarballs on tag push.
    - ssh-tui: `al-bashkir/ssh-tui` → `.github/workflows/release.yml` builds 4 tarballs on tag push.
+   - kubegonfig: `al-bashkir/kubegonfig` builds 4 bare binaries (`kubegonfig-{darwin,linux}-{amd64,arm64}`) plus `.sha256` sidecars on tag push.
 2. Fetch each asset and compute SHA256:
 
    envio (3 SHAs):
@@ -83,9 +85,17 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
      shasum -a 256 "/tmp/ssh-tui-$plat.tgz"
    done
    ```
+
+   kubegonfig (4 SHAs — bare binaries, easiest from the GitHub asset `digest` field, no download):
+   ```bash
+   VER=<new>
+   gh api "repos/al-bashkir/kubegonfig/releases/tags/v${VER}" \
+     -q '.assets[] | select(.name | startswith("kubegonfig-") and (endswith(".sha256") | not)) | "\(.name) \(.digest)"'
+   ```
 3. Edit the formula:
    - **envio**: bump every `v0.6.5` → `v<new>` in URLs (URLs hard-code the version literal because the Rust target triple `url` parses cleanly to a version, so an explicit `version "..."` would be redundant per `brew audit --strict`); replace each `sha256`.
    - **ssh-tui**: bump `version "..."`, replace each `sha256`. URLs use `#{version}` interpolation — no URL edits needed. Explicit `version` is required here because the URL `_amd64`/`_arm64` suffix confuses brew's version-detection heuristic.
+   - **kubegonfig**: bump `version "..."`, replace each `sha256`. URLs use `#{version}` interpolation — no URL edits needed. Explicit `version` is required because the bare-binary URLs carry no version in the filename (`kubegonfig-linux-amd64`).
 4. Open a single-commit PR.
 5. Wait for `brew test-bot` to pass on `macos-26` and `ubuntu-latest`. `--only-formulae` does a full `brew install` + `brew test` cycle.
 6. Merge (regular merge commit or squash — there is no `brew pr-pull` cherry-pick step to worry about anymore).
@@ -94,16 +104,19 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
 
 ### Formula style
 
-Both formulae are **prebuilt-binary installs**. They use per-platform `on_macos` / `on_linux` × `on_arm` / `on_intel` blocks with one `url` + `sha256` pair per supported platform. There is no top-level `url`. Each block points at an upstream release asset.
+All three formulae are **prebuilt-binary installs**. They use per-platform `on_macos` / `on_linux` × `on_arm` / `on_intel` blocks with one `url` + `sha256` pair per supported platform. There is no top-level `url`. Each block points at an upstream release asset.
+
+envio and ssh-tui ship **tarballs** (brew auto-extracts, `def install` paths are relative to the extracted dir). kubegonfig ships **bare binaries** — brew downloads the raw file with its URL basename and does not extract, so `def install` does `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename the single downloaded file.
 
 `ssh-tui.rb` declares an explicit `version "1.3.1"` because the URL contains `_amd64`/`_arm64` numeric noise that brew's version-detection heuristic misreads. `envio.rb` does **not** declare `version` — Rust target-triple URLs (`envio-v0.6.5-aarch64-apple-darwin.tar.gz`, etc.) parse cleanly and `brew audit --strict` flags the explicit declaration as redundant. To compensate, envio URLs hard-code the version literal (`v0.6.5`) rather than interpolate `#{version}`.
 
 ### Platform matrix
 
-| Formula | macOS arm64 | macOS x86_64 | Linux x86_64 | Linux arm64 |
-|---------|-------------|--------------|--------------|-------------|
-| envio   | yes         | **no**       | yes          | yes         |
-| ssh-tui | yes         | yes          | yes          | yes         |
+| Formula    | macOS arm64 | macOS x86_64 | Linux x86_64 | Linux arm64 |
+|------------|-------------|--------------|--------------|-------------|
+| envio      | yes         | **no**       | yes          | yes         |
+| ssh-tui    | yes         | yes          | yes          | yes         |
+| kubegonfig | yes         | yes          | yes          | yes         |
 
 envio macOS Intel is intentionally unsupported — upstream `CICD.yml` does not build that target. The formula declares `depends_on arch: :arm64` inside `on_macos do ... end`, so brew refuses the install on x86_64-apple-darwin before fetching anything. The `on_intel` block inside `on_macos` exists only as a syntax stub (reuses the arm64 URL) because `brew test-bot --only-tap-syntax` iterates every macOS version, including Intel-only ones, and a missing URL would fail tap-syntax with `formula requires at least a URL`. The arch dep gates real installs; the stub URL is never fetched. Once upstream CI starts producing an `x86_64-apple-darwin` asset, drop `depends_on arch: :arm64` and replace the stub URL/sha256 with the real ones.
 
@@ -144,6 +157,15 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - The version subcommand is `envio version` (not `envio --version`). The `test do` block uses the subcommand form.
 - envio's upstream `CICD.yml` builds the binary, strips it, then bundles it with `envio.1`, `autocomplete/envio.bash`, `autocomplete/envio.fish`, `autocomplete/_envio`, `autocomplete/_envio.ps1`, plus README and both LICENSE files into the release tarball. The formula installs the bash/fish/zsh completions and the man page; PowerShell is intentionally skipped.
 - The tarball has a single top-level directory `envio-v<X>-<triple>/`. Homebrew's stage logic cd's into it automatically — `def install` paths are relative to that directory.
+
+### kubegonfig specifics
+
+- Upstream ships **bare binaries**, not tarballs: `kubegonfig-darwin-arm64`, `kubegonfig-darwin-amd64`, `kubegonfig-linux-arm64`, `kubegonfig-linux-amd64`, each with a `.sha256` sidecar. brew does not extract a bare binary — it lands in the build dir under its URL basename. `def install` uses `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename it; `bin.install` also chmods it executable.
+- License is **AGPL-3.0** → formula declares `license "AGPL-3.0-only"`.
+- All 4 platforms supported (no Intel-macOS gap like envio).
+- Explicit `version "..."` is required — the bare-binary filenames carry no version, and URLs interpolate `#{version}`.
+- Shell completions are emitted at install time via `generate_completions_from_executable(bin/"kubegonfig", "completion", shells: [:bash, :zsh])`. Upstream supports `kubegonfig completion bash|zsh` only — do not add fish/powershell. This runs the binary, so it only exercises on a real `brew install`, not `brew style`/`audit`.
+- SHA256s are easiest taken from the GitHub asset `digest` field (`gh api .../releases/tags/v<X>`), no download needed.
 
 ### CI workflows
 

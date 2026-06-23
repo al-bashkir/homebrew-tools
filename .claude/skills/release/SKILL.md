@@ -1,6 +1,6 @@
 ---
 name: release
-description: Bump al-bashkir/homebrew-tools formulae (envio, ssh-tui) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform tarballs, recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio or ssh-tui into the Homebrew tap.
+description: Bump al-bashkir/homebrew-tools formulae (envio, ssh-tui, kubegonfig) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, ssh-tui, or kubegonfig into the Homebrew tap.
 ---
 
 # release
@@ -9,10 +9,11 @@ Procedure to bump one or both formulae in `al-bashkir/homebrew-tools` to match t
 
 ## Inputs
 
-- `$ARGUMENTS` — optional. One of: `envio`, `ssh-tui`, or empty.
-  - Empty: check both formulae.
-  - `envio`: bump envio only (skip ssh-tui even if it has a pending bump).
+- `$ARGUMENTS` — optional. One of: `envio`, `ssh-tui`, `kubegonfig`, or empty.
+  - Empty: check all formulae.
+  - `envio`: bump envio only.
   - `ssh-tui`: bump ssh-tui only.
+  - `kubegonfig`: bump kubegonfig only.
 
 ## Procedure
 
@@ -76,11 +77,12 @@ Parse the optional argument into the `formulae` array. Empty arg = both formulae
 # $ARGUMENTS is substituted by the skill harness before bash sees it.
 arg="${ARGUMENTS:-}"
 case "$arg" in
-  "")        formulae=(envio ssh-tui) ;;
-  envio)     formulae=(envio) ;;
-  ssh-tui)   formulae=(ssh-tui) ;;
+  "")          formulae=(envio ssh-tui kubegonfig) ;;
+  envio)       formulae=(envio) ;;
+  ssh-tui)     formulae=(ssh-tui) ;;
+  kubegonfig)  formulae=(kubegonfig) ;;
   *)
-    echo "ERROR: invalid argument '$arg'. Valid: envio | ssh-tui | (empty)"
+    echo "ERROR: invalid argument '$arg'. Valid: envio | ssh-tui | kubegonfig | (empty)"
     exit 1
     ;;
 esac
@@ -95,6 +97,7 @@ For each formula in `formulae`, parse the current version from the formula file 
 declare -A upstream_repo=(
   [envio]="al-bashkir/envio"
   [ssh-tui]="al-bashkir/ssh-tui"
+  [kubegonfig]="al-bashkir/kubegonfig"
 )
 declare -A current_ver
 declare -A new_ver
@@ -107,6 +110,9 @@ for f in "${formulae[@]}"; do
       ;;
     ssh-tui)
       cur=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/ssh-tui.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+      ;;
+    kubegonfig)
+      cur=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/kubegonfig.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
       ;;
   esac
   [ -n "$cur" ] || { echo "ERROR: could not parse current version for $f"; exit 1; }
@@ -184,6 +190,28 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx ssh-tui; then
   done
 fi
 ```
+
+## Asset fetch — kubegonfig
+
+Runs only if `kubegonfig` is in `to_bump`. Assets are **bare binaries**, not tarballs (`kubegonfig-{os}-{arch}`, no extension). The release also publishes per-asset `.sha256` sidecar files, but the simplest source of truth is the GitHub asset `digest` field (`sha256:...`) — no download required.
+
+```bash
+if printf '%s\n' "${to_bump[@]}" | grep -qx kubegonfig; then
+  v=${new_ver[kubegonfig]}
+  declare -A kube_sha
+
+  rel_json=$(gh api "repos/al-bashkir/kubegonfig/releases/tags/v${v}")
+  for plat in darwin-arm64 darwin-amd64 linux-arm64 linux-amd64; do
+    digest=$(jq -r --arg n "kubegonfig-${plat}" '.assets[] | select(.name==$n) | .digest' <<<"$rel_json")
+    sha=${digest#sha256:}
+    [ -n "$sha" ] || { echo "ERROR: kubegonfig asset/digest missing: kubegonfig-${plat}"; exit 1; }
+    kube_sha[$plat]=$sha
+    echo "kubegonfig $plat: ${kube_sha[$plat]}"
+  done
+fi
+```
+
+If a `digest` field is ever absent (older releases), fall back to downloading the bare binary and hashing it: `curl -fsSL -o /tmp/kubegonfig-$plat "https://github.com/al-bashkir/kubegonfig/releases/download/v${v}/kubegonfig-${plat}" && sha256sum /tmp/kubegonfig-$plat`.
 
 ## Formula edit — envio
 
@@ -289,6 +317,42 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx ssh-tui; then
 fi
 ```
 
+## Formula edit — kubegonfig
+
+Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Like ssh-tui, URLs interpolate `#{version}` so only `version` and the four `sha256` lines change.
+
+**Substitutions (run only if kubegonfig in `to_bump`):**
+
+1. Replace the single `version "..."` declaration:
+   - Old: `version "${current_ver[kubegonfig]}"`
+   - New: `version "${new_ver[kubegonfig]}"`
+
+2. Replace each `sha256 "..."` line with the new digest for its matching block. Block-to-platform mapping:
+   - `on_macos do > on_arm do` → `kube_sha[darwin-arm64]`
+   - `on_macos do > on_intel do` → `kube_sha[darwin-amd64]`
+   - `on_linux do > on_arm do` → `kube_sha[linux-arm64]`
+   - `on_linux do > on_intel do` → `kube_sha[linux-amd64]`
+
+3. **Sanity asserts after edits:**
+
+```bash
+if printf '%s\n' "${to_bump[@]}" | grep -qx kubegonfig; then
+  cur_in_file=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/kubegonfig.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+  if [ "$cur_in_file" != "${new_ver[kubegonfig]}" ]; then
+    echo "ERROR: kubegonfig version line not bumped (file=$cur_in_file expected=${new_ver[kubegonfig]})"; exit 1
+  fi
+  sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/kubegonfig.rb)
+  if [ "$sha_count" != "4" ]; then
+    echo "ERROR: kubegonfig sha256 line count = $sha_count, expected 4"; exit 1
+  fi
+  url_count=$(grep -cE '^[[:space:]]*url ' Formula/kubegonfig.rb)
+  if [ "$url_count" != "4" ]; then
+    echo "ERROR: kubegonfig url line count = $url_count, expected 4"; exit 1
+  fi
+  echo "kubegonfig formula edits OK"
+fi
+```
+
 ## Lint
 
 Run `brew style` and `brew audit --strict --new` per touched formula. On any failure, stop the procedure, leave edits unstaged, and surface the failing command + tail of output to the user.
@@ -324,14 +388,20 @@ If `brew style`/`brew audit` exits with a `cannot load such file -- bundler` err
 Construct branch name, commit message, and PR body from the `to_bump` list. Single-formula and dual-formula cases produce different branch names but a uniform commit-message shape.
 
 ```bash
-# Build branch name and commit subject
+# Build branch name and commit subject from to_bump (any count)
 if [ ${#to_bump[@]} -eq 1 ]; then
-  f=${to_bump[@]:0:1}
+  f=${to_bump[0]}
   branch="release/${f}-v${new_ver[$f]}"
   commit_msg="chore: bump ${f} to v${new_ver[$f]}"
 else
-  branch="release/envio-v${new_ver[envio]}-ssh-tui-v${new_ver[ssh-tui]}"
-  commit_msg="chore: bump envio to v${new_ver[envio]}, ssh-tui to v${new_ver[ssh-tui]}"
+  segs=()      # branch segments, e.g. envio-v0.6.6
+  parts=()     # commit-subject parts, e.g. "envio to v0.6.6"
+  for f in "${to_bump[@]}"; do
+    segs+=("${f}-v${new_ver[$f]}")
+    parts+=("${f} to v${new_ver[$f]}")
+  done
+  branch="release/$(IFS=-; echo "${segs[*]}")"
+  commit_msg="chore: bump $(IFS=,; echo "${parts[*]}" | sed 's/,/, /g')"
 fi
 
 # Refuse if branch exists locally or on remote
@@ -388,6 +458,12 @@ body_file=$(mktemp)
         echo "- darwin_amd64: \`${sshtui_sha[darwin_amd64]}\`"
         echo "- linux_arm64: \`${sshtui_sha[linux_arm64]}\`"
         echo "- linux_amd64: \`${sshtui_sha[linux_amd64]}\`"
+        ;;
+      kubegonfig)
+        echo "- darwin-arm64: \`${kube_sha[darwin-arm64]}\`"
+        echo "- darwin-amd64: \`${kube_sha[darwin-amd64]}\`"
+        echo "- linux-arm64: \`${kube_sha[linux-arm64]}\`"
+        echo "- linux-amd64: \`${kube_sha[linux-amd64]}\`"
         ;;
     esac
     echo
