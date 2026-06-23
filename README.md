@@ -17,6 +17,7 @@ brew "<formula>"
 
 - **envio** — modern, secure CLI for managing environment variables. `brew install al-bashkir/tools/envio`
 - **ssh-tui** — TUI for managing SSH connections. `brew install al-bashkir/tools/ssh-tui`
+- **kubegonfig** — manage and switch between Kubernetes configurations. `brew install al-bashkir/tools/kubegonfig`
 
 ## Documentation
 
