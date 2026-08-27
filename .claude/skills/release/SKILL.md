@@ -109,7 +109,7 @@ for f in "${formulae[@]}"; do
       cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/envio.rb | head -1 | sed 's|.*/v||')
       ;;
     ssh-tui)
-      cur=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/ssh-tui.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+      cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/ssh-tui.rb | head -1 | sed 's|.*/v||')
       ;;
     kubegonfig)
       cur=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/kubegonfig.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -284,11 +284,9 @@ Use the Edit tool to perform the substitutions below against `Formula/ssh-tui.rb
 
 **Substitutions (run only if ssh-tui in `to_bump`):**
 
-1. Replace the single `version "..."` declaration:
-   - Old: `version "${current_ver[ssh-tui]}"`
-   - New: `version "${new_ver[ssh-tui]}"`
+1. Bump the literal version in every URL line. `Formula/ssh-tui.rb` hard-codes the version twice per URL (`.../download/v<X>/ssh-tui_v<X>_<os>_<arch>.tar.gz`) and declares **no** `version` — brew's version-detection heuristic parses these filenames cleanly and `brew audit --strict` rejects an explicit declaration as redundant. Replace `v${current_ver[ssh-tui]}` with `v${new_ver[ssh-tui]}` everywhere it appears.
 
-2. Replace each `sha256 "..."` line with the new digest for its matching block. URLs use `#{version}` interpolation so they do NOT need editing. The block-to-platform mapping:
+2. Replace each `sha256 "..."` line with the new digest for its matching block. The block-to-platform mapping:
    - `on_macos do > on_arm do` → `sshtui_sha[darwin_arm64]`
    - `on_macos do > on_intel do` → `sshtui_sha[darwin_amd64]`
    - `on_linux do > on_arm do` → `sshtui_sha[linux_arm64]`
@@ -298,17 +296,22 @@ Use the Edit tool to perform the substitutions below against `Formula/ssh-tui.rb
 
 ```bash
 if printf '%s\n' "${to_bump[@]}" | grep -qx ssh-tui; then
-  # Confirm version line was bumped
-  cur_in_file=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/ssh-tui.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-  if [ "$cur_in_file" != "${new_ver[ssh-tui]}" ]; then
-    echo "ERROR: ssh-tui version line not bumped (file=$cur_in_file expected=${new_ver[ssh-tui]})"; exit 1
+  # Confirm every URL got bumped — no leftover old-version literal in URL lines
+  if grep -E '^[[:space:]]*url ' Formula/ssh-tui.rb | grep -q "v${current_ver[ssh-tui]}"; then
+    echo "ERROR: leftover old version v${current_ver[ssh-tui]} in ssh-tui URL line"
+    grep -nE '^[[:space:]]*url ' Formula/ssh-tui.rb
+    exit 1
+  fi
+  # Confirm no explicit version declaration crept back in (brew audit --strict rejects it)
+  if grep -qE '^[[:space:]]*version "' Formula/ssh-tui.rb; then
+    echo "ERROR: ssh-tui declares an explicit version; brew audit flags it as redundant"; exit 1
   fi
   # Confirm 4 sha256 lines still present
   sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/ssh-tui.rb)
   if [ "$sha_count" != "4" ]; then
     echo "ERROR: ssh-tui sha256 line count = $sha_count, expected 4"; exit 1
   fi
-  # Confirm 4 url lines still present (untouched)
+  # Confirm 4 url lines still present
   url_count=$(grep -cE '^[[:space:]]*url ' Formula/ssh-tui.rb)
   if [ "$url_count" != "4" ]; then
     echo "ERROR: ssh-tui url line count = $url_count, expected 4"; exit 1
@@ -319,7 +322,7 @@ fi
 
 ## Formula edit — kubegonfig
 
-Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Like ssh-tui, URLs interpolate `#{version}` so only `version` and the four `sha256` lines change.
+Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Unlike envio and ssh-tui, kubegonfig URLs interpolate `#{version}` (the bare-binary filenames carry no version), so only `version` and the four `sha256` lines change.
 
 **Substitutions (run only if kubegonfig in `to_bump`):**
 

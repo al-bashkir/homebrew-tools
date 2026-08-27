@@ -94,7 +94,7 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
    ```
 3. Edit the formula:
    - **envio**: bump every `v0.6.5` → `v<new>` in URLs (URLs hard-code the version literal because the Rust target triple `url` parses cleanly to a version, so an explicit `version "..."` would be redundant per `brew audit --strict`); replace each `sha256`.
-   - **ssh-tui**: bump `version "..."`, replace each `sha256`. URLs use `#{version}` interpolation — no URL edits needed. Explicit `version` is required here because the URL `_amd64`/`_arm64` suffix confuses brew's version-detection heuristic.
+   - **ssh-tui**: bump every `v1.3.3` → `v<new>` in URLs (URLs hard-code the version literal — brew parses `ssh-tui_v<X>_<os>_<arch>.tar.gz` cleanly, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
    - **kubegonfig**: bump `version "..."`, replace each `sha256`. URLs use `#{version}` interpolation — no URL edits needed. Explicit `version` is required because the bare-binary URLs carry no version in the filename (`kubegonfig-linux-amd64`).
 4. Open a single-commit PR.
 5. Wait for `brew test-bot` to pass on `macos-26` and `ubuntu-latest`. `--only-formulae` does a full `brew install` + `brew test` cycle.
@@ -108,7 +108,7 @@ All three formulae are **prebuilt-binary installs**. They use per-platform `on_m
 
 envio and ssh-tui ship **tarballs** (brew auto-extracts, `def install` paths are relative to the extracted dir). kubegonfig ships **bare binaries** — brew downloads the raw file with its URL basename and does not extract, so `def install` does `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename the single downloaded file.
 
-`ssh-tui.rb` declares an explicit `version "1.3.1"` because the URL contains `_amd64`/`_arm64` numeric noise that brew's version-detection heuristic misreads. `envio.rb` does **not** declare `version` — Rust target-triple URLs (`envio-v0.6.5-aarch64-apple-darwin.tar.gz`, etc.) parse cleanly and `brew audit --strict` flags the explicit declaration as redundant. To compensate, envio URLs hard-code the version literal (`v0.6.5`) rather than interpolate `#{version}`.
+Neither `ssh-tui.rb` nor `envio.rb` declares `version` — both URL shapes (`envio-v<X>-aarch64-apple-darwin.tar.gz`, `ssh-tui_v<X>_darwin_arm64.tar.gz`) parse cleanly and `brew audit --strict` flags an explicit declaration as redundant. To compensate, both formulae hard-code the version literal in their URLs rather than interpolate `#{version}`. (ssh-tui used to need an explicit `version`; brew's heuristic improved and the declaration became an audit failure — dropped in v1.3.3.)
 
 ### Platform matrix
 
