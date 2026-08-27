@@ -95,7 +95,7 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
 3. Edit the formula:
    - **envio**: bump every `v0.6.5` → `v<new>` in URLs (URLs hard-code the version literal because the Rust target triple `url` parses cleanly to a version, so an explicit `version "..."` would be redundant per `brew audit --strict`); replace each `sha256`.
    - **ssh-tui**: bump every `v1.3.3` → `v<new>` in URLs (URLs hard-code the version literal — brew parses `ssh-tui_v<X>_<os>_<arch>.tar.gz` cleanly, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
-   - **kubegonfig**: bump `version "..."`, replace each `sha256`. URLs use `#{version}` interpolation — no URL edits needed. Explicit `version` is required because the bare-binary URLs carry no version in the filename (`kubegonfig-linux-amd64`).
+   - **kubegonfig**: bump every `v0.7` → `v<new>` in URLs (URLs hard-code the version literal — brew scans the version out of the `download/v<X>/` path segment, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
 4. Open a single-commit PR.
 5. Wait for `brew test-bot` to pass on `macos-26` and `ubuntu-latest`. `--only-formulae` does a full `brew install` + `brew test` cycle.
 6. Merge (regular merge commit or squash — there is no `brew pr-pull` cherry-pick step to worry about anymore).
@@ -108,7 +108,7 @@ All three formulae are **prebuilt-binary installs**. They use per-platform `on_m
 
 envio and ssh-tui ship **tarballs** (brew auto-extracts, `def install` paths are relative to the extracted dir). kubegonfig ships **bare binaries** — brew downloads the raw file with its URL basename and does not extract, so `def install` does `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename the single downloaded file.
 
-Neither `ssh-tui.rb` nor `envio.rb` declares `version` — both URL shapes (`envio-v<X>-aarch64-apple-darwin.tar.gz`, `ssh-tui_v<X>_darwin_arm64.tar.gz`) parse cleanly and `brew audit --strict` flags an explicit declaration as redundant. To compensate, both formulae hard-code the version literal in their URLs rather than interpolate `#{version}`. (ssh-tui used to need an explicit `version`; brew's heuristic improved and the declaration became an audit failure — dropped in v1.3.3.)
+None of the three formulae declares `version` — brew scans the version out of the URL for all of them (`envio-v<X>-aarch64-apple-darwin.tar.gz` and `ssh-tui_v<X>_darwin_arm64.tar.gz` from the filename; `kubegonfig-linux-amd64` from the `download/v<X>/` path segment) and `brew audit --strict` flags an explicit declaration as redundant. To compensate, all three hard-code the version literal in their URLs rather than interpolate `#{version}`. (ssh-tui and kubegonfig used to need an explicit `version`; brew's heuristic improved around brew 6.0.19 and the declarations turned into audit failures — both dropped alongside the ssh-tui v1.3.3 bump.)
 
 ### Platform matrix
 
@@ -163,7 +163,7 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - Upstream ships **bare binaries**, not tarballs: `kubegonfig-darwin-arm64`, `kubegonfig-darwin-amd64`, `kubegonfig-linux-arm64`, `kubegonfig-linux-amd64`, each with a `.sha256` sidecar. brew does not extract a bare binary — it lands in the build dir under its URL basename. `def install` uses `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename it; `bin.install` also chmods it executable.
 - License is **AGPL-3.0** → formula declares `license "AGPL-3.0-only"`.
 - All 4 platforms supported (no Intel-macOS gap like envio).
-- Explicit `version "..."` is required — the bare-binary filenames carry no version, and URLs interpolate `#{version}`.
+- No explicit `version "..."` — the bare-binary filenames carry no version, but brew scans it from the `download/v<X>/` URL path segment, so a declaration audits as redundant. URLs hard-code the version literal.
 - Shell completions are emitted at install time via `generate_completions_from_executable(bin/"kubegonfig", "completion", shells: [:bash, :zsh])`. Upstream supports `kubegonfig completion bash|zsh` only — do not add fish/powershell. This runs the binary, so it only exercises on a real `brew install`, not `brew style`/`audit`.
 - SHA256s are easiest taken from the GitHub asset `digest` field (`gh api .../releases/tags/v<X>`), no download needed.
 

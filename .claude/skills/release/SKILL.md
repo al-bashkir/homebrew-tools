@@ -112,7 +112,7 @@ for f in "${formulae[@]}"; do
       cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/ssh-tui.rb | head -1 | sed 's|.*/v||')
       ;;
     kubegonfig)
-      cur=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/kubegonfig.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+      cur=$(grep -oE 'releases/download/v[0-9]+(\.[0-9]+)*' Formula/kubegonfig.rb | head -1 | sed 's|.*/v||')
       ;;
   esac
   [ -n "$cur" ] || { echo "ERROR: could not parse current version for $f"; exit 1; }
@@ -322,13 +322,11 @@ fi
 
 ## Formula edit — kubegonfig
 
-Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Unlike envio and ssh-tui, kubegonfig URLs interpolate `#{version}` (the bare-binary filenames carry no version), so only `version` and the four `sha256` lines change.
+Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Same shape as envio and ssh-tui: the version literal is hard-coded in each URL and there is **no** `version` declaration — the bare-binary filenames carry no version, but brew scans it from the `download/v<X>/` path segment, so a declaration audits as redundant.
 
 **Substitutions (run only if kubegonfig in `to_bump`):**
 
-1. Replace the single `version "..."` declaration:
-   - Old: `version "${current_ver[kubegonfig]}"`
-   - New: `version "${new_ver[kubegonfig]}"`
+1. Bump the literal version in every URL line: replace `v${current_ver[kubegonfig]}` with `v${new_ver[kubegonfig]}` everywhere it appears.
 
 2. Replace each `sha256 "..."` line with the new digest for its matching block. Block-to-platform mapping:
    - `on_macos do > on_arm do` → `kube_sha[darwin-arm64]`
@@ -340,9 +338,13 @@ Use the Edit tool to perform the substitutions below against `Formula/kubegonfig
 
 ```bash
 if printf '%s\n' "${to_bump[@]}" | grep -qx kubegonfig; then
-  cur_in_file=$(grep -oE '^[[:space:]]*version "[^"]+"' Formula/kubegonfig.rb | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-  if [ "$cur_in_file" != "${new_ver[kubegonfig]}" ]; then
-    echo "ERROR: kubegonfig version line not bumped (file=$cur_in_file expected=${new_ver[kubegonfig]})"; exit 1
+  if grep -E '^[[:space:]]*url ' Formula/kubegonfig.rb | grep -q "v${current_ver[kubegonfig]}/"; then
+    echo "ERROR: leftover old version v${current_ver[kubegonfig]} in kubegonfig URL line"
+    grep -nE '^[[:space:]]*url ' Formula/kubegonfig.rb
+    exit 1
+  fi
+  if grep -qE '^[[:space:]]*version "' Formula/kubegonfig.rb; then
+    echo "ERROR: kubegonfig declares an explicit version; brew audit flags it as redundant"; exit 1
   fi
   sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/kubegonfig.rb)
   if [ "$sha_count" != "4" ]; then
