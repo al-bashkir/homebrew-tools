@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-Standard Homebrew third-party tap (`al-bashkir/tools`) shipping three prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
+Standard Homebrew third-party tap (`al-bashkir/tools`) shipping four prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
 
 - `Formula/envio.rb` — Rust CLI from `al-bashkir/envio`. Per-platform tarballs pulled from the upstream `CICD.yml` release assets.
 - `Formula/ssh-tui.rb` — Go TUI from `al-bashkir/ssh-tui`. Per-platform tarballs pulled from the upstream `release.yml` release assets.
 - `Formula/kubegonfig.rb` — Kubernetes-config tool from `al-bashkir/kubegonfig`. Per-platform **bare binaries** (no tarball) pulled from the upstream release assets.
+- `Formula/pulp-tui.rb` — Rust TUI for Pulp 3 from `al-bashkir/pulp-tui`. Two tarballs only (macOS arm64, Linux x86_64 musl); see "pulp-tui specifics".
 
 Users install with `brew install al-bashkir/tools/<formula>`. **No Homebrew bottles, no `brew pr-pull`.** The prebuilt binary downloaded from the upstream release IS the precompiled artifact.
 
@@ -117,6 +118,7 @@ None of the three formulae declares `version` — brew scans the version out of 
 | envio      | yes         | **no**       | yes          | yes         |
 | ssh-tui    | yes         | yes          | yes          | yes         |
 | kubegonfig | yes         | yes          | yes          | yes         |
+| pulp-tui   | yes         | **no**       | yes          | **no**      |
 
 envio macOS Intel is intentionally unsupported — upstream `CICD.yml` does not build that target. The formula declares `depends_on arch: :arm64` inside `on_macos do ... end`, so brew refuses the install on x86_64-apple-darwin before fetching anything. The `on_intel` block inside `on_macos` exists only as a syntax stub (reuses the arm64 URL) because `brew test-bot --only-tap-syntax` iterates every macOS version, including Intel-only ones, and a missing URL would fail tap-syntax with `formula requires at least a URL`. The arch dep gates real installs; the stub URL is never fetched. Once upstream CI starts producing an `x86_64-apple-darwin` asset, drop `depends_on arch: :arm64` and replace the stub URL/sha256 with the real ones.
 
@@ -166,6 +168,14 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - No explicit `version "..."` — the bare-binary filenames carry no version, but brew scans it from the `download/v<X>/` URL path segment, so a declaration audits as redundant. URLs hard-code the version literal.
 - Shell completions are emitted at install time via `generate_completions_from_executable(bin/"kubegonfig", "completion", shells: [:bash, :zsh])`. Upstream supports `kubegonfig completion bash|zsh` only — do not add fish/powershell. This runs the binary, so it only exercises on a real `brew install`, not `brew style`/`audit`.
 - SHA256s are easiest taken from the GitHub asset `digest` field (`gh api .../releases/tags/v<X>`), no download needed.
+
+### pulp-tui specifics
+
+- Upstream ships two tarballs: `pulp-tui-v<X>-aarch64-apple-darwin.tar.gz` and `pulp-tui-v<X>-x86_64-unknown-linux-musl.tar.gz`. Each holds only the bare `pulp-tui` binary at the tarball root (no dir, no man page, no completions). The Linux binary is static musl — no runtime deps.
+- Two platform gaps, same pattern as envio macOS Intel: `depends_on arch: :arm64` inside `on_macos`, `depends_on arch: :x86_64` inside `on_linux`. The `on_macos > on_intel` and `on_linux > on_arm` blocks are syntax stubs that reuse the supported URL of the same OS. When upstream adds a target, replace the stub URL/sha256 and drop that arch dep.
+- License **Apache-2.0**. No `version` declaration — brew parses it from the filename. URLs hard-code the version literal.
+- `pulp-tui --version` prints `pulp-tui v<X>`; the `test do` block matches on it. There is no completion subcommand.
+- SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
 
 ### CI workflows
 
