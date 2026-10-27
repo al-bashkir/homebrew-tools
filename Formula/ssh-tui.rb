@@ -5,23 +5,23 @@ class SshTui < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.3/ssh-tui_v1.3.3_darwin_arm64.tar.gz"
-      sha256 "ac493a6f91298debceb57505b538f6ed0e1e0c93e4dd756277a59f80a87ea5de"
+      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.4/ssh-tui_v1.3.4_darwin_arm64.tar.gz"
+      sha256 "8d43485aceaf7c3fc263d34f6cb11fc2691ad3969743321515d317797f63a041"
     end
     on_intel do
-      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.3/ssh-tui_v1.3.3_darwin_amd64.tar.gz"
-      sha256 "65a8ef3b0482f5a6f081d8bbfc7de9788adf1f1c0f5136a7b9fb7a59195b1f24"
+      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.4/ssh-tui_v1.3.4_darwin_amd64.tar.gz"
+      sha256 "19dddcfdb0528a644d06e5c6c76054a0f9657084207af2054aa1c5ebf83e77d8"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.3/ssh-tui_v1.3.3_linux_arm64.tar.gz"
-      sha256 "fbf25c0638be68ebae74947483352299f66d67c701e0508501e2c2d3d3c0ed81"
+      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.4/ssh-tui_v1.3.4_linux_arm64.tar.gz"
+      sha256 "df4c9b8296ef9c434c2d78298e1d9679a2cd0fc03f69b45a5ac47a9c6982e7e3"
     end
     on_intel do
-      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.3/ssh-tui_v1.3.3_linux_amd64.tar.gz"
-      sha256 "4adf1cdc86a4a1b5e0a6631e32e2bc4e43856331635d836d25f1076c089da52a"
+      url "https://github.com/al-bashkir/ssh-tui/releases/download/v1.3.4/ssh-tui_v1.3.4_linux_amd64.tar.gz"
+      sha256 "b9009d8cdde285b24438b2265d3edd3836be6eb9e88c641d369aea372fed71ba"
     end
   end
 
