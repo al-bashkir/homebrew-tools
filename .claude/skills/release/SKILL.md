@@ -221,9 +221,9 @@ If a `digest` field is ever absent (older releases), fall back to downloading th
 
 ## Asset fetch — pulp-tui
 
-Runs only if `pulp-tui` is in `to_bump`. Upstream ships only **two** tarballs: `pulp-tui-v<X>-aarch64-apple-darwin.tar.gz` and `pulp-tui-v<X>-x86_64-unknown-linux-musl.tar.gz` (plus a `SHA256SUMS` file). SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
+Runs only if `pulp-tui` is in `to_bump`. Upstream ships **three** tarballs: `pulp-tui-v<X>-{aarch64-apple-darwin,aarch64-unknown-linux-musl,x86_64-unknown-linux-musl}.tar.gz` (plus a `SHA256SUMS` file). SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
 
-The formula has two stub blocks (`on_macos > on_intel`, `on_linux > on_arm`) gated by `depends_on arch:`. If upstream starts shipping any other tarball (new target), **stop and tell the user** — the stub promotion for pulp-tui is not automated.
+The formula has one stub block (`on_macos > on_intel`) gated by `depends_on arch: :arm64`. If upstream starts shipping any other tarball (new target), **stop and tell the user** — the stub promotion for pulp-tui is not automated.
 
 ```bash
 if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
@@ -231,7 +231,7 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
   declare -A pulp_sha
 
   rel_json=$(gh api "repos/al-bashkir/pulp-tui/releases/tags/v${v}")
-  for triple in aarch64-apple-darwin x86_64-unknown-linux-musl; do
+  for triple in aarch64-apple-darwin aarch64-unknown-linux-musl x86_64-unknown-linux-musl; do
     digest=$(jq -r --arg n "pulp-tui-v${v}-${triple}.tar.gz" '.assets[] | select(.name==$n) | .digest' <<<"$rel_json")
     sha=${digest#sha256:}
     [ -n "$sha" ] && [ "$sha" != "null" ] || { echo "ERROR: pulp-tui asset/digest missing: $triple"; exit 1; }
@@ -240,7 +240,7 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
   done
 
   extra=$(jq -r --arg v "$v" '.assets[].name | select(endswith(".tar.gz"))
-    | select(. != "pulp-tui-v\($v)-aarch64-apple-darwin.tar.gz" and . != "pulp-tui-v\($v)-x86_64-unknown-linux-musl.tar.gz")' <<<"$rel_json")
+    | select(. != "pulp-tui-v\($v)-aarch64-apple-darwin.tar.gz" and . != "pulp-tui-v\($v)-aarch64-unknown-linux-musl.tar.gz" and . != "pulp-tui-v\($v)-x86_64-unknown-linux-musl.tar.gz")' <<<"$rel_json")
   if [ -n "$extra" ]; then
     echo "ERROR: pulp-tui has new target tarballs; promote the matching stub block by hand:"
     echo "$extra"
@@ -402,13 +402,13 @@ Use the Edit tool to perform the substitutions below against `Formula/pulp-tui.r
 
 1. Bump the literal version in every URL line: replace `v${current_ver[pulp-tui]}` with `v${new_ver[pulp-tui]}` everywhere it appears.
 
-2. Replace each `sha256 "..."` line with the new digest for its matching block. The two stub blocks mirror the real asset of the same OS:
+2. Replace each `sha256 "..."` line with the new digest for its matching block. The macOS Intel stub mirrors the arm64 asset:
    - `on_macos do > on_arm do` → `pulp_sha[aarch64-apple-darwin]`
    - `on_macos do > on_intel do` (stub) → `pulp_sha[aarch64-apple-darwin]`
-   - `on_linux do > on_arm do` (stub) → `pulp_sha[x86_64-unknown-linux-musl]`
+   - `on_linux do > on_arm do` → `pulp_sha[aarch64-unknown-linux-musl]`
    - `on_linux do > on_intel do` → `pulp_sha[x86_64-unknown-linux-musl]`
 
-   Leave both `depends_on arch:` lines and the stub-explainer comment intact.
+   Leave the `depends_on arch: :arm64` line and the stub-explainer comment intact.
 
 3. **Sanity asserts after edits:**
 
@@ -430,8 +430,8 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
   if [ "$url_count" != "4" ]; then
     echo "ERROR: pulp-tui url line count = $url_count, expected 4"; exit 1
   fi
-  if [ "$(grep -c 'depends_on arch:' Formula/pulp-tui.rb)" != "2" ]; then
-    echo "ERROR: pulp-tui must keep both arch deps (arm64 on macOS, x86_64 on Linux)"; exit 1
+  if [ "$(grep -c 'depends_on arch:' Formula/pulp-tui.rb)" != "1" ]; then
+    echo "ERROR: pulp-tui must keep exactly one arch dep (arm64 on macOS)"; exit 1
   fi
   echo "pulp-tui formula edits OK"
 fi
@@ -551,8 +551,9 @@ body_file=$(mktemp)
         ;;
       pulp-tui)
         echo "- aarch64-apple-darwin: \`${pulp_sha[aarch64-apple-darwin]}\`"
+        echo "- aarch64-unknown-linux-musl: \`${pulp_sha[aarch64-unknown-linux-musl]}\`"
         echo "- x86_64-unknown-linux-musl: \`${pulp_sha[x86_64-unknown-linux-musl]}\`"
-        echo "- macOS Intel / Linux arm64: stubs (\`depends_on arch:\` still in effect)"
+        echo "- macOS Intel: stub (\`depends_on arch: :arm64\` still in effect)"
         ;;
     esac
     echo

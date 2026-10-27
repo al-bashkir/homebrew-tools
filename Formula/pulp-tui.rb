@@ -3,34 +3,31 @@ class PulpTui < Formula
   homepage "https://github.com/al-bashkir/pulp-tui"
   license "Apache-2.0"
 
-  # Upstream ships only aarch64-apple-darwin and x86_64-unknown-linux-musl.
-  # The arch deps make brew refuse the unsupported platforms before any fetch.
-  # The stub blocks reuse the supported URL only so the formula passes the
-  # tap-syntax check on every runner. Replace a stub with a real URL and drop
-  # its arch dep once upstream builds that target.
+  # Upstream ships no x86_64-apple-darwin asset. The arch dep makes brew refuse
+  # macOS Intel before any fetch. The on_intel stub reuses the arm64 URL only so
+  # the formula passes the tap-syntax check on every runner. Replace the stub
+  # with a real URL and drop the arch dep once upstream builds that target.
   on_macos do
     depends_on arch: :arm64
 
     on_arm do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.0/pulp-tui-v0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "787acae7f3c860b27a75678990c53579c78bfc826544ccc4d06a290a9a8c5c11"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.1/pulp-tui-v0.1.1-aarch64-apple-darwin.tar.gz"
+      sha256 "85668ce849f91e949a61ab79e53722036540bfc6ab1dd156905dbff8e5048ffa"
     end
     on_intel do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.0/pulp-tui-v0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "787acae7f3c860b27a75678990c53579c78bfc826544ccc4d06a290a9a8c5c11"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.1/pulp-tui-v0.1.1-aarch64-apple-darwin.tar.gz"
+      sha256 "85668ce849f91e949a61ab79e53722036540bfc6ab1dd156905dbff8e5048ffa"
     end
   end
 
   on_linux do
-    depends_on arch: :x86_64
-
     on_arm do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.0/pulp-tui-v0.1.0-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "9ab14232de59bb8ed37ce4f2be0ac5771b51c5d9a7ec3e5b62f1e8057a75708f"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.1/pulp-tui-v0.1.1-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "e87a44a23d175af3a50c26583f03d303c6c0d6661589e43ad5641200946ffeb4"
     end
     on_intel do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.0/pulp-tui-v0.1.0-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "9ab14232de59bb8ed37ce4f2be0ac5771b51c5d9a7ec3e5b62f1e8057a75708f"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.1.1/pulp-tui-v0.1.1-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "cdc6034f93f65d8617237006dcaf81ff9ee5b3efd2b3c0725281aa2f1e80a81d"
     end
   end
 
