@@ -1,6 +1,6 @@
 ---
 name: release
-description: Bump al-bashkir/homebrew-tools formulae (envio, ssh-tui, kubegonfig, pulp-tui) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, ssh-tui, kubegonfig, or pulp-tui into the Homebrew tap.
+description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, or pulp-tui into the Homebrew tap.
 ---
 
 # release
@@ -9,10 +9,10 @@ Procedure to bump one or more formulae in `al-bashkir/homebrew-tools` to match t
 
 ## Inputs
 
-- `$ARGUMENTS` — optional. One of: `envio`, `ssh-tui`, `kubegonfig`, `pulp-tui`, or empty.
+- `$ARGUMENTS` — optional. One of: `envio`, `sshelf`, `kubegonfig`, `pulp-tui`, or empty.
   - Empty: check all formulae.
   - `envio`: bump envio only.
-  - `ssh-tui`: bump ssh-tui only.
+  - `sshelf`: bump sshelf only.
   - `kubegonfig`: bump kubegonfig only.
   - `pulp-tui`: bump pulp-tui only.
 
@@ -78,13 +78,13 @@ Parse the optional argument into the `formulae` array. Empty arg = all formulae.
 # $ARGUMENTS is substituted by the skill harness before bash sees it.
 arg="${ARGUMENTS:-}"
 case "$arg" in
-  "")          formulae=(envio ssh-tui kubegonfig pulp-tui) ;;
+  "")          formulae=(envio sshelf kubegonfig pulp-tui) ;;
   envio)       formulae=(envio) ;;
-  ssh-tui)     formulae=(ssh-tui) ;;
+  sshelf)     formulae=(sshelf) ;;
   kubegonfig)  formulae=(kubegonfig) ;;
   pulp-tui)    formulae=(pulp-tui) ;;
   *)
-    echo "ERROR: invalid argument '$arg'. Valid: envio | ssh-tui | kubegonfig | pulp-tui | (empty)"
+    echo "ERROR: invalid argument '$arg'. Valid: envio | sshelf | kubegonfig | pulp-tui | (empty)"
     exit 1
     ;;
 esac
@@ -98,7 +98,7 @@ For each formula in `formulae`, parse the current version from the formula file 
 ```bash
 declare -A upstream_repo=(
   [envio]="al-bashkir/envio"
-  [ssh-tui]="al-bashkir/ssh-tui"
+  [sshelf]="al-bashkir/sshelf"
   [kubegonfig]="al-bashkir/kubegonfig"
   [pulp-tui]="al-bashkir/pulp-tui"
 )
@@ -111,8 +111,8 @@ for f in "${formulae[@]}"; do
     envio)
       cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/envio.rb | head -1 | sed 's|.*/v||')
       ;;
-    ssh-tui)
-      cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/ssh-tui.rb | head -1 | sed 's|.*/v||')
+    sshelf)
+      cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/sshelf.rb | head -1 | sed 's|.*/v||')
       ;;
     kubegonfig)
       cur=$(grep -oE 'releases/download/v[0-9]+(\.[0-9]+)*' Formula/kubegonfig.rb | head -1 | sed 's|.*/v||')
@@ -178,21 +178,21 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx envio; then
 fi
 ```
 
-## Tarball fetch — ssh-tui
+## Tarball fetch — sshelf
 
-Runs only if `ssh-tui` is in `to_bump`. Four mandatory platform tarballs.
+Runs only if `sshelf` is in `to_bump`. Four mandatory platform tarballs.
 
 ```bash
-if printf '%s\n' "${to_bump[@]}" | grep -qx ssh-tui; then
-  v=${new_ver[ssh-tui]}
-  declare -A sshtui_sha
+if printf '%s\n' "${to_bump[@]}" | grep -qx sshelf; then
+  v=${new_ver[sshelf]}
+  declare -A sshelf_sha
 
   for plat in darwin_arm64 darwin_amd64 linux_arm64 linux_amd64; do
-    url="https://github.com/al-bashkir/ssh-tui/releases/download/v${v}/ssh-tui_v${v}_${plat}.tar.gz"
-    out="/tmp/ssh-tui-${plat}.tgz"
-    curl -fsSL -o "$out" "$url" || { echo "ERROR: ssh-tui asset 404: $plat ($url)"; exit 1; }
-    sshtui_sha[$plat]=$(sha256sum "$out" | awk '{print $1}')
-    echo "ssh-tui $plat: ${sshtui_sha[$plat]}"
+    url="https://github.com/al-bashkir/sshelf/releases/download/v${v}/sshelf_v${v}_${plat}.tar.gz"
+    out="/tmp/sshelf-${plat}.tgz"
+    curl -fsSL -o "$out" "$url" || { echo "ERROR: sshelf asset 404: $plat ($url)"; exit 1; }
+    sshelf_sha[$plat]=$(sha256sum "$out" | awk '{print $1}')
+    echo "sshelf $plat: ${sshelf_sha[$plat]}"
   done
 fi
 ```
@@ -314,51 +314,51 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx envio; then
 fi
 ```
 
-## Formula edit — ssh-tui
+## Formula edit — sshelf
 
-Use the Edit tool to perform the substitutions below against `Formula/ssh-tui.rb`. Use `sed -i` only as a fallback.
+Use the Edit tool to perform the substitutions below against `Formula/sshelf.rb`. Use `sed -i` only as a fallback.
 
-**Substitutions (run only if ssh-tui in `to_bump`):**
+**Substitutions (run only if sshelf in `to_bump`):**
 
-1. Bump the literal version in every URL line. `Formula/ssh-tui.rb` hard-codes the version twice per URL (`.../download/v<X>/ssh-tui_v<X>_<os>_<arch>.tar.gz`) and declares **no** `version` — brew's version-detection heuristic parses these filenames cleanly and `brew audit --strict` rejects an explicit declaration as redundant. Replace `v${current_ver[ssh-tui]}` with `v${new_ver[ssh-tui]}` everywhere it appears.
+1. Bump the literal version in every URL line. `Formula/sshelf.rb` hard-codes the version twice per URL (`.../download/v<X>/sshelf_v<X>_<os>_<arch>.tar.gz`) and declares **no** `version` — brew's version-detection heuristic parses these filenames cleanly and `brew audit --strict` rejects an explicit declaration as redundant. Replace `v${current_ver[sshelf]}` with `v${new_ver[sshelf]}` everywhere it appears.
 
 2. Replace each `sha256 "..."` line with the new digest for its matching block. The block-to-platform mapping:
-   - `on_macos do > on_arm do` → `sshtui_sha[darwin_arm64]`
-   - `on_macos do > on_intel do` → `sshtui_sha[darwin_amd64]`
-   - `on_linux do > on_arm do` → `sshtui_sha[linux_arm64]`
-   - `on_linux do > on_intel do` → `sshtui_sha[linux_amd64]`
+   - `on_macos do > on_arm do` → `sshelf_sha[darwin_arm64]`
+   - `on_macos do > on_intel do` → `sshelf_sha[darwin_amd64]`
+   - `on_linux do > on_arm do` → `sshelf_sha[linux_arm64]`
+   - `on_linux do > on_intel do` → `sshelf_sha[linux_amd64]`
 
 3. **Sanity asserts after edits:**
 
 ```bash
-if printf '%s\n' "${to_bump[@]}" | grep -qx ssh-tui; then
+if printf '%s\n' "${to_bump[@]}" | grep -qx sshelf; then
   # Confirm every URL got bumped — no leftover old-version literal in URL lines
-  if grep -E '^[[:space:]]*url ' Formula/ssh-tui.rb | grep -q "v${current_ver[ssh-tui]}"; then
-    echo "ERROR: leftover old version v${current_ver[ssh-tui]} in ssh-tui URL line"
-    grep -nE '^[[:space:]]*url ' Formula/ssh-tui.rb
+  if grep -E '^[[:space:]]*url ' Formula/sshelf.rb | grep -q "v${current_ver[sshelf]}"; then
+    echo "ERROR: leftover old version v${current_ver[sshelf]} in sshelf URL line"
+    grep -nE '^[[:space:]]*url ' Formula/sshelf.rb
     exit 1
   fi
   # Confirm no explicit version declaration crept back in (brew audit --strict rejects it)
-  if grep -qE '^[[:space:]]*version "' Formula/ssh-tui.rb; then
-    echo "ERROR: ssh-tui declares an explicit version; brew audit flags it as redundant"; exit 1
+  if grep -qE '^[[:space:]]*version "' Formula/sshelf.rb; then
+    echo "ERROR: sshelf declares an explicit version; brew audit flags it as redundant"; exit 1
   fi
   # Confirm 4 sha256 lines still present
-  sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/ssh-tui.rb)
+  sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/sshelf.rb)
   if [ "$sha_count" != "4" ]; then
-    echo "ERROR: ssh-tui sha256 line count = $sha_count, expected 4"; exit 1
+    echo "ERROR: sshelf sha256 line count = $sha_count, expected 4"; exit 1
   fi
   # Confirm 4 url lines still present
-  url_count=$(grep -cE '^[[:space:]]*url ' Formula/ssh-tui.rb)
+  url_count=$(grep -cE '^[[:space:]]*url ' Formula/sshelf.rb)
   if [ "$url_count" != "4" ]; then
-    echo "ERROR: ssh-tui url line count = $url_count, expected 4"; exit 1
+    echo "ERROR: sshelf url line count = $url_count, expected 4"; exit 1
   fi
-  echo "ssh-tui formula edits OK"
+  echo "sshelf formula edits OK"
 fi
 ```
 
 ## Formula edit — kubegonfig
 
-Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Same shape as envio and ssh-tui: the version literal is hard-coded in each URL and there is **no** `version` declaration — the bare-binary filenames carry no version, but brew scans it from the `download/v<X>/` path segment, so a declaration audits as redundant.
+Use the Edit tool to perform the substitutions below against `Formula/kubegonfig.rb`. Use `sed -i` only as a fallback. Same shape as envio and sshelf: the version literal is hard-coded in each URL and there is **no** `version` declaration — the bare-binary filenames carry no version, but brew scans it from the `download/v<X>/` path segment, so a declaration audits as redundant.
 
 **Substitutions (run only if kubegonfig in `to_bump`):**
 
@@ -537,11 +537,11 @@ body_file=$(mktemp)
           echo "**macOS Intel:** upstream now ships an \`x86_64-apple-darwin\` asset. Dropped \`depends_on arch: :arm64\`."
         fi
         ;;
-      ssh-tui)
-        echo "- darwin_arm64: \`${sshtui_sha[darwin_arm64]}\`"
-        echo "- darwin_amd64: \`${sshtui_sha[darwin_amd64]}\`"
-        echo "- linux_arm64: \`${sshtui_sha[linux_arm64]}\`"
-        echo "- linux_amd64: \`${sshtui_sha[linux_amd64]}\`"
+      sshelf)
+        echo "- darwin_arm64: \`${sshelf_sha[darwin_arm64]}\`"
+        echo "- darwin_amd64: \`${sshelf_sha[darwin_amd64]}\`"
+        echo "- linux_arm64: \`${sshelf_sha[linux_arm64]}\`"
+        echo "- linux_amd64: \`${sshelf_sha[linux_amd64]}\`"
         ;;
       kubegonfig)
         echo "- darwin-arm64: \`${kube_sha[darwin-arm64]}\`"

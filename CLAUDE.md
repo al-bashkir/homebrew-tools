@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Standard Homebrew third-party tap (`al-bashkir/tools`) shipping four prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
 
 - `Formula/envio.rb` — Rust CLI from `al-bashkir/envio`. Per-platform tarballs pulled from the upstream `CICD.yml` release assets.
-- `Formula/ssh-tui.rb` — Go TUI from `al-bashkir/ssh-tui`. Per-platform tarballs pulled from the upstream `release.yml` release assets.
+- `Formula/sshelf.rb` — Go TUI from `al-bashkir/sshelf`. Per-platform tarballs pulled from the upstream `release.yml` release assets.
 - `Formula/kubegonfig.rb` — Kubernetes-config tool from `al-bashkir/kubegonfig`. Per-platform **bare binaries** (no tarball) pulled from the upstream release assets.
 - `Formula/pulp-tui.rb` — Rust TUI for Pulp 3 from `al-bashkir/pulp-tui`. Three tarballs (macOS arm64, Linux arm64 + x86_64 musl); see "pulp-tui specifics".
 
@@ -32,9 +32,9 @@ If a real clone already sits at `$TAP_PATH`, remove it first (`rm -rf "$TAP_PATH
 
 ```bash
 brew style Formula/envio.rb
-brew style Formula/ssh-tui.rb
+brew style Formula/sshelf.rb
 brew audit --strict --new al-bashkir/tools/envio       # use the tap-resolved name, not a path
-brew audit --strict --new al-bashkir/tools/ssh-tui
+brew audit --strict --new al-bashkir/tools/sshelf
 brew test-bot --only-tap-syntax --tap=al-bashkir/tools  # full sweep CI runs
 ```
 
@@ -63,7 +63,7 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
 
 1. Wait for the upstream release CI to finish publishing assets:
    - envio: `al-bashkir/envio` → `.github/workflows/CICD.yml` builds 3 tarballs on tag push.
-   - ssh-tui: `al-bashkir/ssh-tui` → `.github/workflows/release.yml` builds 4 tarballs on tag push.
+   - sshelf: `al-bashkir/sshelf` → `.github/workflows/release.yml` builds 4 tarballs on tag push.
    - kubegonfig: `al-bashkir/kubegonfig` builds 4 bare binaries (`kubegonfig-{darwin,linux}-{amd64,arm64}`) plus `.sha256` sidecars on tag push.
 2. Fetch each asset and compute SHA256:
 
@@ -77,13 +77,13 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
    done
    ```
 
-   ssh-tui (4 SHAs):
+   sshelf (4 SHAs):
    ```bash
    VER=<new>
    for plat in darwin_arm64 darwin_amd64 linux_arm64 linux_amd64; do
-     curl -fsSL -o "/tmp/ssh-tui-$plat.tgz" \
-       "https://github.com/al-bashkir/ssh-tui/releases/download/v${VER}/ssh-tui_v${VER}_${plat}.tar.gz"
-     shasum -a 256 "/tmp/ssh-tui-$plat.tgz"
+     curl -fsSL -o "/tmp/sshelf-$plat.tgz" \
+       "https://github.com/al-bashkir/sshelf/releases/download/v${VER}/sshelf_v${VER}_${plat}.tar.gz"
+     shasum -a 256 "/tmp/sshelf-$plat.tgz"
    done
    ```
 
@@ -95,7 +95,7 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
    ```
 3. Edit the formula:
    - **envio**: bump every `v0.6.5` → `v<new>` in URLs (URLs hard-code the version literal because the Rust target triple `url` parses cleanly to a version, so an explicit `version "..."` would be redundant per `brew audit --strict`); replace each `sha256`.
-   - **ssh-tui**: bump every `v1.3.3` → `v<new>` in URLs (URLs hard-code the version literal — brew parses `ssh-tui_v<X>_<os>_<arch>.tar.gz` cleanly, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
+   - **sshelf**: bump every `v0.1.0` → `v<new>` in URLs (URLs hard-code the version literal — brew parses `sshelf_v<X>_<os>_<arch>.tar.gz` cleanly, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
    - **kubegonfig**: bump every `v0.7` → `v<new>` in URLs (URLs hard-code the version literal — brew scans the version out of the `download/v<X>/` path segment, so an explicit `version "..."` is redundant per `brew audit --strict`); replace each `sha256`.
 4. Open a single-commit PR.
 5. Wait for `brew test-bot` to pass on `macos-26` and `ubuntu-latest`. `--only-formulae` does a full `brew install` + `brew test` cycle.
@@ -107,16 +107,16 @@ Install is now a download + extract (seconds), not a compile. There is no `--bui
 
 All three formulae are **prebuilt-binary installs**. They use per-platform `on_macos` / `on_linux` × `on_arm` / `on_intel` blocks with one `url` + `sha256` pair per supported platform. There is no top-level `url`. Each block points at an upstream release asset.
 
-envio and ssh-tui ship **tarballs** (brew auto-extracts, `def install` paths are relative to the extracted dir). kubegonfig ships **bare binaries** — brew downloads the raw file with its URL basename and does not extract, so `def install` does `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename the single downloaded file.
+envio and sshelf ship **tarballs** (brew auto-extracts, `def install` paths are relative to the extracted dir). kubegonfig ships **bare binaries** — brew downloads the raw file with its URL basename and does not extract, so `def install` does `bin.install Dir["kubegonfig-*"].first => "kubegonfig"` to rename the single downloaded file.
 
-None of the three formulae declares `version` — brew scans the version out of the URL for all of them (`envio-v<X>-aarch64-apple-darwin.tar.gz` and `ssh-tui_v<X>_darwin_arm64.tar.gz` from the filename; `kubegonfig-linux-amd64` from the `download/v<X>/` path segment) and `brew audit --strict` flags an explicit declaration as redundant. To compensate, all three hard-code the version literal in their URLs rather than interpolate `#{version}`. (ssh-tui and kubegonfig used to need an explicit `version`; brew's heuristic improved around brew 6.0.19 and the declarations turned into audit failures — both dropped alongside the ssh-tui v1.3.3 bump.)
+None of the three formulae declares `version` — brew scans the version out of the URL for all of them (`envio-v<X>-aarch64-apple-darwin.tar.gz` and `sshelf_v<X>_darwin_arm64.tar.gz` from the filename; `kubegonfig-linux-amd64` from the `download/v<X>/` path segment) and `brew audit --strict` flags an explicit declaration as redundant. To compensate, all three hard-code the version literal in their URLs rather than interpolate `#{version}`. (ssh-tui (sshelf's predecessor) and kubegonfig used to need an explicit `version`; brew's heuristic improved around brew 6.0.19 and the declarations turned into audit failures — both dropped alongside the ssh-tui v1.3.3 bump.)
 
 ### Platform matrix
 
 | Formula    | macOS arm64 | macOS x86_64 | Linux x86_64 | Linux arm64 |
 |------------|-------------|--------------|--------------|-------------|
 | envio      | yes         | **no**       | yes          | yes         |
-| ssh-tui    | yes         | yes          | yes          | yes         |
+| sshelf     | yes         | yes          | yes          | yes         |
 | kubegonfig | yes         | yes          | yes          | yes         |
 | pulp-tui   | yes         | **no**       | yes          | yes         |
 
@@ -147,11 +147,12 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 
 `pkgconf` and `rust` are **not** build deps anymore — prebuilt binaries do not need a Rust toolchain at install time.
 
-### ssh-tui specifics
+### sshelf specifics
 
 - `go` is **not** a build dep — the formula installs a prebuilt binary.
-- ssh-tui has **no `--version` flag** — its CLI is subcommand-based and never prints a version. The `test do` block asserts the binary exists and is executable instead of pattern-matching version output.
-- Shell completions are emitted at install time via `generate_completions_from_executable(bin/"ssh-tui", "completion", shells: [:bash, :zsh])`. Upstream supports only bash + zsh; do not add fish/powershell to the `shells:` list.
+- sshelf has **no `--version` flag** — its CLI is subcommand-based and never prints a version. The `test do` block asserts the binary exists and is executable instead of pattern-matching version output.
+- Shell completions are emitted at install time via `generate_completions_from_executable(bin/"sshelf", "completion", shells: [:bash, :zsh])`. Upstream supports only bash + zsh; do not add fish/powershell to the `shells:` list.
+- Renamed from `ssh-tui` (upstream `al-bashkir/ssh-tui` → `al-bashkir/sshelf`). `formula_renames.json` maps `ssh-tui` → `sshelf`, so `brew update` migrates existing `ssh-tui` installs. Keep that file.
 - Upstream `release.yml` tarballs ship only the bare binary — no man page, no LICENSE inside the tarball. License metadata stays on the formula.
 
 ### envio specifics
