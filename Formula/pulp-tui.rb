@@ -11,23 +11,23 @@ class PulpTui < Formula
     depends_on arch: :arm64
 
     on_arm do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.2.0/pulp-tui-v0.2.0-aarch64-apple-darwin.tar.gz"
-      sha256 "6dd04ab7a79f4ac2c7117473bc5f71bb60c8b0878fa963e9c3b554f6a924b58c"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.3.0/pulp-tui-v0.3.0-aarch64-apple-darwin.tar.gz"
+      sha256 "989594f788d705b97fa731b8fdfb6d8cb9fe951d40a3ad034d88bb8e1d422ca9"
     end
     on_intel do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.2.0/pulp-tui-v0.2.0-aarch64-apple-darwin.tar.gz"
-      sha256 "6dd04ab7a79f4ac2c7117473bc5f71bb60c8b0878fa963e9c3b554f6a924b58c"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.3.0/pulp-tui-v0.3.0-aarch64-apple-darwin.tar.gz"
+      sha256 "989594f788d705b97fa731b8fdfb6d8cb9fe951d40a3ad034d88bb8e1d422ca9"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.2.0/pulp-tui-v0.2.0-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "28e858c381431f581ac7c613c1c940d0332b3efa5f9f3bbdc159eeed884fadc2"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.3.0/pulp-tui-v0.3.0-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "acd0d2b26784031ae955736a318f6b4be72f4940578db5c13a467477470f1227"
     end
     on_intel do
-      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.2.0/pulp-tui-v0.2.0-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "b75ff430055567184b4cb9c5722a42da4151c3e44354b3c5d9b6a560170bfcec"
+      url "https://github.com/al-bashkir/pulp-tui/releases/download/v0.3.0/pulp-tui-v0.3.0-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "ef30c688778fe6c61652c80076518c4305d2f4769193a7837dd42e803f8d01db"
     end
   end
 
