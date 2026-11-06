@@ -7,23 +7,23 @@ class Sshelf < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/al-bashkir/sshelf/releases/download/v0.1.0/sshelf_v0.1.0_darwin_arm64.tar.gz"
-      sha256 "92aeda0930909286798a81e39f08d0ed6ea6fa550f506742a009fb95fc0b62a6"
+      url "https://github.com/al-bashkir/sshelf/releases/download/v0.2.0/sshelf_v0.2.0_darwin_arm64.tar.gz"
+      sha256 "cdb773d884d4b8b125d67204d71acc01ee7bb42b2fd888f206b46a63691fef4e"
     end
     on_intel do
-      url "https://github.com/al-bashkir/sshelf/releases/download/v0.1.0/sshelf_v0.1.0_darwin_amd64.tar.gz"
-      sha256 "c9e1649ec42f8876b8ed025e5b0718b0fc3d150a05a6ad33ff6f1d8e817bbc9e"
+      url "https://github.com/al-bashkir/sshelf/releases/download/v0.2.0/sshelf_v0.2.0_darwin_amd64.tar.gz"
+      sha256 "f80573e1532a161fc2e23a7455c5c5a89dc6f8a90c37fa0057be5a2c4a6e168d"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/sshelf/releases/download/v0.1.0/sshelf_v0.1.0_linux_arm64.tar.gz"
-      sha256 "cff3173a83b9fec713329f1fa01f50ba7de4b227b0be1cad76f6b0304961850e"
+      url "https://github.com/al-bashkir/sshelf/releases/download/v0.2.0/sshelf_v0.2.0_linux_arm64.tar.gz"
+      sha256 "c3109d0e11984c8078f1ce18d3facb99f187241789dcd54f118b21dc918ea579"
     end
     on_intel do
-      url "https://github.com/al-bashkir/sshelf/releases/download/v0.1.0/sshelf_v0.1.0_linux_amd64.tar.gz"
-      sha256 "239273ffac0af8286e2c2755d9ef2d27d2475f5731e3cd425d47283ff89959e4"
+      url "https://github.com/al-bashkir/sshelf/releases/download/v0.2.0/sshelf_v0.2.0_linux_amd64.tar.gz"
+      sha256 "09ac8087a63fed8e26efb31ed2a8db1e4c82b8f60eef38d66a7c7bf9ded4d5ba"
     end
   end
 
