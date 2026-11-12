@@ -1,6 +1,6 @@
 ---
 name: release
-description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, or pulp-tui into the Homebrew tap.
+description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui, rustow) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, pulp-tui, or rustow into the Homebrew tap.
 ---
 
 # release
@@ -9,12 +9,13 @@ Procedure to bump one or more formulae in `al-bashkir/homebrew-tools` to match t
 
 ## Inputs
 
-- `$ARGUMENTS` — optional. One of: `envio`, `sshelf`, `kubegonfig`, `pulp-tui`, or empty.
+- `$ARGUMENTS` — optional. One of: `envio`, `sshelf`, `kubegonfig`, `pulp-tui`, `rustow`, or empty.
   - Empty: check all formulae.
   - `envio`: bump envio only.
   - `sshelf`: bump sshelf only.
   - `kubegonfig`: bump kubegonfig only.
   - `pulp-tui`: bump pulp-tui only.
+  - `rustow`: bump rustow only.
 
 ## Procedure
 
@@ -78,13 +79,14 @@ Parse the optional argument into the `formulae` array. Empty arg = all formulae.
 # $ARGUMENTS is substituted by the skill harness before bash sees it.
 arg="${ARGUMENTS:-}"
 case "$arg" in
-  "")          formulae=(envio sshelf kubegonfig pulp-tui) ;;
+  "")          formulae=(envio sshelf kubegonfig pulp-tui rustow) ;;
   envio)       formulae=(envio) ;;
   sshelf)     formulae=(sshelf) ;;
   kubegonfig)  formulae=(kubegonfig) ;;
   pulp-tui)    formulae=(pulp-tui) ;;
+  rustow)      formulae=(rustow) ;;
   *)
-    echo "ERROR: invalid argument '$arg'. Valid: envio | sshelf | kubegonfig | pulp-tui | (empty)"
+    echo "ERROR: invalid argument '$arg'. Valid: envio | sshelf | kubegonfig | pulp-tui | rustow | (empty)"
     exit 1
     ;;
 esac
@@ -101,6 +103,7 @@ declare -A upstream_repo=(
   [sshelf]="al-bashkir/sshelf"
   [kubegonfig]="al-bashkir/kubegonfig"
   [pulp-tui]="al-bashkir/pulp-tui"
+  [rustow]="al-bashkir/rustow"
 )
 declare -A current_ver
 declare -A new_ver
@@ -117,8 +120,8 @@ for f in "${formulae[@]}"; do
     kubegonfig)
       cur=$(grep -oE 'releases/download/v[0-9]+(\.[0-9]+)*' Formula/kubegonfig.rb | head -1 | sed 's|.*/v||')
       ;;
-    pulp-tui)
-      cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' Formula/pulp-tui.rb | head -1 | sed 's|.*/v||')
+    pulp-tui|rustow)
+      cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' "Formula/$f.rb" | head -1 | sed 's|.*/v||')
       ;;
   esac
   [ -n "$cur" ] || { echo "ERROR: could not parse current version for $f"; exit 1; }
@@ -219,34 +222,35 @@ fi
 
 If a `digest` field is ever absent (older releases), fall back to downloading the bare binary and hashing it: `curl -fsSL -o /tmp/kubegonfig-$plat "https://github.com/al-bashkir/kubegonfig/releases/download/v${v}/kubegonfig-${plat}" && sha256sum /tmp/kubegonfig-$plat`.
 
-## Asset fetch — pulp-tui
+## Asset fetch — pulp-tui, rustow
 
-Runs only if `pulp-tui` is in `to_bump`. Upstream ships **three** tarballs: `pulp-tui-v<X>-{aarch64-apple-darwin,aarch64-unknown-linux-musl,x86_64-unknown-linux-musl}.tar.gz` (plus a `SHA256SUMS` file). SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
+pulp-tui and rustow have the same release shape, so one loop handles both. It runs for each of them that is in `to_bump`. Upstream ships **three** tarballs: `<f>-v<X>-{aarch64-apple-darwin,aarch64-unknown-linux-musl,x86_64-unknown-linux-musl}.tar.gz` (plus a `SHA256SUMS` file). SHA256s come from the GitHub asset `digest` field, same as kubegonfig. The rustow tarballs also hold `completions/`; their paths carry no version, so they need no edit.
 
-The formula has one stub block (`on_macos > on_intel`) gated by `depends_on arch: :arm64`. If upstream starts shipping any other tarball (new target), **stop and tell the user** — the stub promotion for pulp-tui is not automated.
+Each formula has one stub block (`on_macos > on_intel`) gated by `depends_on arch: :arm64`. If upstream starts shipping any other tarball (new target), **stop and tell the user** — the stub promotion is not automated.
 
 ```bash
-if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
-  v=${new_ver[pulp-tui]}
-  declare -A pulp_sha
+declare -A trio_sha   # key: "<formula>/<triple>"
+for f in pulp-tui rustow; do
+  printf '%s\n' "${to_bump[@]}" | grep -qx "$f" || continue
+  v=${new_ver[$f]}
 
-  rel_json=$(gh api "repos/al-bashkir/pulp-tui/releases/tags/v${v}")
+  rel_json=$(gh api "repos/${upstream_repo[$f]}/releases/tags/v${v}")
   for triple in aarch64-apple-darwin aarch64-unknown-linux-musl x86_64-unknown-linux-musl; do
-    digest=$(jq -r --arg n "pulp-tui-v${v}-${triple}.tar.gz" '.assets[] | select(.name==$n) | .digest' <<<"$rel_json")
+    digest=$(jq -r --arg n "${f}-v${v}-${triple}.tar.gz" '.assets[] | select(.name==$n) | .digest' <<<"$rel_json")
     sha=${digest#sha256:}
-    [ -n "$sha" ] && [ "$sha" != "null" ] || { echo "ERROR: pulp-tui asset/digest missing: $triple"; exit 1; }
-    pulp_sha[$triple]=$sha
-    echo "pulp-tui $triple: ${pulp_sha[$triple]}"
+    [ -n "$sha" ] && [ "$sha" != "null" ] || { echo "ERROR: $f asset/digest missing: $triple"; exit 1; }
+    trio_sha["$f/$triple"]=$sha
+    echo "$f $triple: $sha"
   done
 
-  extra=$(jq -r --arg v "$v" '.assets[].name | select(endswith(".tar.gz"))
-    | select(. != "pulp-tui-v\($v)-aarch64-apple-darwin.tar.gz" and . != "pulp-tui-v\($v)-aarch64-unknown-linux-musl.tar.gz" and . != "pulp-tui-v\($v)-x86_64-unknown-linux-musl.tar.gz")' <<<"$rel_json")
+  extra=$(jq -r --arg p "${f}-v${v}-" '.assets[].name | select(endswith(".tar.gz"))
+    | select(. != "\($p)aarch64-apple-darwin.tar.gz" and . != "\($p)aarch64-unknown-linux-musl.tar.gz" and . != "\($p)x86_64-unknown-linux-musl.tar.gz")' <<<"$rel_json")
   if [ -n "$extra" ]; then
-    echo "ERROR: pulp-tui has new target tarballs; promote the matching stub block by hand:"
+    echo "ERROR: $f has new target tarballs; promote the matching stub block by hand:"
     echo "$extra"
     exit 1
   fi
-fi
+done
 ```
 
 ## Formula edit — envio
@@ -394,47 +398,49 @@ if printf '%s\n' "${to_bump[@]}" | grep -qx kubegonfig; then
 fi
 ```
 
-## Formula edit — pulp-tui
+## Formula edit — pulp-tui, rustow
 
-Use the Edit tool to perform the substitutions below against `Formula/pulp-tui.rb`. Use `sed -i` only as a fallback. Same shape as envio: the version literal is hard-coded twice per URL (`.../download/v<X>/pulp-tui-v<X>-<triple>.tar.gz`) and there is **no** `version` declaration.
+Do the steps below once for each `$f` in `to_bump` that is `pulp-tui` or `rustow`, against `Formula/$f.rb`. Use the Edit tool; use `sed -i` only as a fallback. Same shape as envio: the version literal is hard-coded twice per URL (`.../download/v<X>/<f>-v<X>-<triple>.tar.gz`) and there is **no** `version` declaration.
 
-**Substitutions (run only if pulp-tui in `to_bump`):**
+**Substitutions:**
 
-1. Bump the literal version in every URL line: replace `v${current_ver[pulp-tui]}` with `v${new_ver[pulp-tui]}` everywhere it appears.
+1. Bump the literal version in every URL line: replace `v${current_ver[$f]}` with `v${new_ver[$f]}` everywhere it appears.
 
 2. Replace each `sha256 "..."` line with the new digest for its matching block. The macOS Intel stub mirrors the arm64 asset:
-   - `on_macos do > on_arm do` → `pulp_sha[aarch64-apple-darwin]`
-   - `on_macos do > on_intel do` (stub) → `pulp_sha[aarch64-apple-darwin]`
-   - `on_linux do > on_arm do` → `pulp_sha[aarch64-unknown-linux-musl]`
-   - `on_linux do > on_intel do` → `pulp_sha[x86_64-unknown-linux-musl]`
+   - `on_macos do > on_arm do` → `trio_sha[$f/aarch64-apple-darwin]`
+   - `on_macos do > on_intel do` (stub) → `trio_sha[$f/aarch64-apple-darwin]`
+   - `on_linux do > on_arm do` → `trio_sha[$f/aarch64-unknown-linux-musl]`
+   - `on_linux do > on_intel do` → `trio_sha[$f/x86_64-unknown-linux-musl]`
 
    Leave the `depends_on arch: :arm64` line and the stub-explainer comment intact.
 
 3. **Sanity asserts after edits:**
 
 ```bash
-if printf '%s\n' "${to_bump[@]}" | grep -qx pulp-tui; then
-  if grep -E '^[[:space:]]*url ' Formula/pulp-tui.rb | grep -q "v${current_ver[pulp-tui]}"; then
-    echo "ERROR: leftover old version v${current_ver[pulp-tui]} in pulp-tui URL line"
-    grep -nE '^[[:space:]]*url ' Formula/pulp-tui.rb
+for f in pulp-tui rustow; do
+  printf '%s\n' "${to_bump[@]}" | grep -qx "$f" || continue
+  file="Formula/$f.rb"
+  if grep -E '^[[:space:]]*url ' "$file" | grep -q "v${current_ver[$f]}"; then
+    echo "ERROR: leftover old version v${current_ver[$f]} in $f URL line"
+    grep -nE '^[[:space:]]*url ' "$file"
     exit 1
   fi
-  if grep -qE '^[[:space:]]*version "' Formula/pulp-tui.rb; then
-    echo "ERROR: pulp-tui declares an explicit version; brew audit flags it as redundant"; exit 1
+  if grep -qE '^[[:space:]]*version "' "$file"; then
+    echo "ERROR: $f declares an explicit version; brew audit flags it as redundant"; exit 1
   fi
-  sha_count=$(grep -cE '^[[:space:]]*sha256 ' Formula/pulp-tui.rb)
+  sha_count=$(grep -cE '^[[:space:]]*sha256 ' "$file")
   if [ "$sha_count" != "4" ]; then
-    echo "ERROR: pulp-tui sha256 line count = $sha_count, expected 4"; exit 1
+    echo "ERROR: $f sha256 line count = $sha_count, expected 4"; exit 1
   fi
-  url_count=$(grep -cE '^[[:space:]]*url ' Formula/pulp-tui.rb)
+  url_count=$(grep -cE '^[[:space:]]*url ' "$file")
   if [ "$url_count" != "4" ]; then
-    echo "ERROR: pulp-tui url line count = $url_count, expected 4"; exit 1
+    echo "ERROR: $f url line count = $url_count, expected 4"; exit 1
   fi
-  if [ "$(grep -c 'depends_on arch:' Formula/pulp-tui.rb)" != "1" ]; then
-    echo "ERROR: pulp-tui must keep exactly one arch dep (arm64 on macOS)"; exit 1
+  if [ "$(grep -c 'depends_on arch:' "$file")" != "1" ]; then
+    echo "ERROR: $f must keep exactly one arch dep (arm64 on macOS)"; exit 1
   fi
-  echo "pulp-tui formula edits OK"
-fi
+  echo "$f formula edits OK"
+done
 ```
 
 ## Lint
@@ -549,10 +555,10 @@ body_file=$(mktemp)
         echo "- linux-arm64: \`${kube_sha[linux-arm64]}\`"
         echo "- linux-amd64: \`${kube_sha[linux-amd64]}\`"
         ;;
-      pulp-tui)
-        echo "- aarch64-apple-darwin: \`${pulp_sha[aarch64-apple-darwin]}\`"
-        echo "- aarch64-unknown-linux-musl: \`${pulp_sha[aarch64-unknown-linux-musl]}\`"
-        echo "- x86_64-unknown-linux-musl: \`${pulp_sha[x86_64-unknown-linux-musl]}\`"
+      pulp-tui|rustow)
+        echo "- aarch64-apple-darwin: \`${trio_sha[$f/aarch64-apple-darwin]}\`"
+        echo "- aarch64-unknown-linux-musl: \`${trio_sha[$f/aarch64-unknown-linux-musl]}\`"
+        echo "- x86_64-unknown-linux-musl: \`${trio_sha[$f/x86_64-unknown-linux-musl]}\`"
         echo "- macOS Intel: stub (\`depends_on arch: :arm64\` still in effect)"
         ;;
     esac

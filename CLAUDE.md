@@ -189,7 +189,7 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - License **MIT**. No `version` declaration — brew parses it from the filename. URLs hard-code the version literal.
 - `rustow --version` prints `rustow <X>` (no `v`); the `test do` block matches on it.
 - SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
-- Not yet covered by the `release` skill — bump by hand.
+- The `release` skill handles pulp-tui and rustow with one shared fetch/edit section, because both have the same release shape.
 
 ### CI workflows
 
