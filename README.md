@@ -19,6 +19,7 @@ brew "<formula>"
 - **sshelf** — TUI for managing SSH connections. `brew install al-bashkir/tools/sshelf`
 - **kubegonfig** — manage and switch between Kubernetes configurations. `brew install al-bashkir/tools/kubegonfig`
 - **pulp-tui** — keyboard-driven terminal UI for Pulp 3 (macOS arm64 and Linux x86_64 only). `brew install al-bashkir/tools/pulp-tui`
+- **rustow** — flat-repository dotfiles manager with templates and age/GPG secrets (macOS arm64 and Linux only). `brew install al-bashkir/tools/rustow`
 
 ## Documentation
 
