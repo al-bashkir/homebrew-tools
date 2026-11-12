@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-Standard Homebrew third-party tap (`al-bashkir/tools`) shipping four prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
+Standard Homebrew third-party tap (`al-bashkir/tools`) shipping five prebuilt-binary formulae for upstream projects also owned by the same GitHub user:
 
 - `Formula/envio.rb` — Rust CLI from `al-bashkir/envio`. Per-platform tarballs pulled from the upstream `CICD.yml` release assets.
 - `Formula/sshelf.rb` — Go TUI from `al-bashkir/sshelf`. Per-platform tarballs pulled from the upstream `release.yml` release assets.
 - `Formula/kubegonfig.rb` — Kubernetes-config tool from `al-bashkir/kubegonfig`. Per-platform **bare binaries** (no tarball) pulled from the upstream release assets.
 - `Formula/pulp-tui.rb` — Rust TUI for Pulp 3 from `al-bashkir/pulp-tui`. Three tarballs (macOS arm64, Linux arm64 + x86_64 musl); see "pulp-tui specifics".
+- `Formula/rustow.rb` — Rust dotfiles manager from `al-bashkir/rustow`. Same three tarball targets as pulp-tui, plus shell completions inside the tarball; see "rustow specifics".
 
 Users install with `brew install al-bashkir/tools/<formula>`. **No Homebrew bottles, no `brew pr-pull`.** The prebuilt binary downloaded from the upstream release IS the precompiled artifact.
 
@@ -119,6 +120,7 @@ None of the three formulae declares `version` — brew scans the version out of 
 | sshelf     | yes         | yes          | yes          | yes         |
 | kubegonfig | yes         | yes          | yes          | yes         |
 | pulp-tui   | yes         | **no**       | yes          | yes         |
+| rustow     | yes         | **no**       | yes          | yes         |
 
 envio macOS Intel is intentionally unsupported — upstream `CICD.yml` does not build that target. The formula declares `depends_on arch: :arm64` inside `on_macos do ... end`, so brew refuses the install on x86_64-apple-darwin before fetching anything. The `on_intel` block inside `on_macos` exists only as a syntax stub (reuses the arm64 URL) because `brew test-bot --only-tap-syntax` iterates every macOS version, including Intel-only ones, and a missing URL would fail tap-syntax with `formula requires at least a URL`. The arch dep gates real installs; the stub URL is never fetched. Once upstream CI starts producing an `x86_64-apple-darwin` asset, drop `depends_on arch: :arm64` and replace the stub URL/sha256 with the real ones.
 
@@ -177,6 +179,17 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - License **Apache-2.0**. No `version` declaration — brew parses it from the filename. URLs hard-code the version literal.
 - `pulp-tui --version` prints `pulp-tui v<X>`; the `test do` block matches on it. There is no completion subcommand.
 - SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
+
+### rustow specifics
+
+- Upstream ships three tarballs: `rustow-v<X>-{aarch64-apple-darwin,aarch64-unknown-linux-musl,x86_64-unknown-linux-musl}.tar.gz` (plus `SHA256SUMS`). Each has one top-level dir `rustow-v<X>-<triple>/` with the `rustow` binary, `README.md`, `LICENSE` and `completions/{rustow.bash,rustow.fish,_rustow}`. No man page.
+- Completions are **not** generated at install time. The formula copies the prebuilt files from `completions/` (same approach as envio). Do not switch to `generate_completions_from_executable` unless upstream drops them from the tarball.
+- Same platform gap and stub pattern as pulp-tui: `depends_on arch: :arm64` inside `on_macos`, `on_macos > on_intel` reuses the arm64 URL.
+- No runtime deps: Linux binaries are static musl; the macOS binary links only system `libSystem` and `libiconv`.
+- License **MIT**. No `version` declaration — brew parses it from the filename. URLs hard-code the version literal.
+- `rustow --version` prints `rustow <X>` (no `v`); the `test do` block matches on it.
+- SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
+- Not yet covered by the `release` skill — bump by hand.
 
 ### CI workflows
 
