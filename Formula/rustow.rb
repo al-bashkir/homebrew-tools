@@ -11,23 +11,23 @@ class Rustow < Formula
     depends_on arch: :arm64
 
     on_arm do
-      url "https://github.com/al-bashkir/rustow/releases/download/v0.1.0/rustow-v0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "1f8f10f751240d79b3ea5da262f77371702cf06f61b572778bc6297838b77234"
+      url "https://github.com/al-bashkir/rustow/releases/download/v0.2.2/rustow-v0.2.2-aarch64-apple-darwin.tar.gz"
+      sha256 "27cfd15a1b5b48c38a3e07c40a13dae66771ea218bb9cc60c641b84c486fc896"
     end
     on_intel do
-      url "https://github.com/al-bashkir/rustow/releases/download/v0.1.0/rustow-v0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "1f8f10f751240d79b3ea5da262f77371702cf06f61b572778bc6297838b77234"
+      url "https://github.com/al-bashkir/rustow/releases/download/v0.2.2/rustow-v0.2.2-aarch64-apple-darwin.tar.gz"
+      sha256 "27cfd15a1b5b48c38a3e07c40a13dae66771ea218bb9cc60c641b84c486fc896"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/rustow/releases/download/v0.1.0/rustow-v0.1.0-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "5e855c6b33076439635c878d6562f2c67f1b1a4971bb0d140579978986eabd08"
+      url "https://github.com/al-bashkir/rustow/releases/download/v0.2.2/rustow-v0.2.2-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "fdbee6dc94968e5f8399ac5b507779216e708f43360160178a77163da2d89c46"
     end
     on_intel do
-      url "https://github.com/al-bashkir/rustow/releases/download/v0.1.0/rustow-v0.1.0-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "7cb6ac3d03d1d3bf21321a9cf01716b1945badac286e051e695b2e265c4535ed"
+      url "https://github.com/al-bashkir/rustow/releases/download/v0.2.2/rustow-v0.2.2-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "3b0530e6ea8857bf074169c53e7c0c4c616f7422d8c29366c8ffd15aff6bbf72"
     end
   end
 
