@@ -583,6 +583,8 @@ Do this automatically after the PR is open. Do not ask the user first.
 
 `brew test-bot` on `macos-26` takes many minutes, longer than the 2-minute Bash default. Run the watch command with the Bash tool `run_in_background: true` and wait for the completion notification. Do not poll.
 
+**After you start the watch, end your turn.** The completion notification comes from the system in a later turn. Never write a `<task-notification>` block yourself, and never merge in the same response that started the watch. If the watch output file is empty or shows `pending`, the watch is still running: wait, do not merge. (On PR #20 a self-written notification caused a merge while both checks were pending.)
+
 ```bash
 # Checks can take a few seconds to register after `gh pr create`;
 # `gh pr checks --watch` exits with "no checks reported" if run too early.
@@ -604,7 +606,16 @@ gh pr checks "$pr_url" --watch --fail-fast --interval 30
 
 **If all checks pass:**
 
+Run this gate and the merge in one Bash call. The gate queries the checks again, so a wrong exit code or a wrong notification cannot cause a merge.
+
 ```bash
+# Merge gate: every check must be in bucket "pass" (or "skipping") right now.
+checks=$(gh pr checks "$pr_url" --json name,bucket)
+bad=$(jq -r '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"' <<<"$checks")
+if [ "$(jq length <<<"$checks")" -eq 0 ] || [ -n "$bad" ]; then
+  echo "ERROR: not merging, checks not all passed:"; echo "${bad:-no checks}"; exit 1
+fi
+
 # Squash matches the repo history (one "chore: bump ... (#N)" commit per release).
 gh pr merge "$pr_url" --squash --delete-branch
 git switch main
