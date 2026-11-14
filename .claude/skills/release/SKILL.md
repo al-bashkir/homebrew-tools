@@ -1,6 +1,6 @@
 ---
 name: release
-description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui, rustow) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, pulp-tui, or rustow into the Homebrew tap.
+description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui, rustow) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR, watches CI and squash-merges it when green. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, pulp-tui, or rustow into the Homebrew tap.
 ---
 
 # release
@@ -27,7 +27,8 @@ Procedure to bump one or more formulae in `al-bashkir/homebrew-tools` to match t
 6. **Lint** — `brew style` + `brew audit --strict --new`. Stop on failure, leave edits unstaged.
 7. **Branch, commit, push** — naming convention in "Branch + commit" section.
 8. **Open PR** — `gh pr create` with structured body.
-9. **Report** — print PR URL on final line.
+9. **Watch CI + merge** — wait for all PR checks; squash-merge when green, stop when red. See "Watch CI + merge" section.
+10. **Report** — print PR URL and merge result on final line.
 
 ## Preflight guards
 
@@ -575,3 +576,40 @@ pr_url=$(gh pr create --title "$commit_msg" --body-file "$body_file")
 rm -f "$body_file"
 echo "$pr_url"
 ```
+
+## Watch CI + merge
+
+Do this automatically after the PR is open. Do not ask the user first.
+
+`brew test-bot` on `macos-26` takes many minutes, longer than the 2-minute Bash default. Run the watch command with the Bash tool `run_in_background: true` and wait for the completion notification. Do not poll.
+
+```bash
+# Checks can take a few seconds to register after `gh pr create`;
+# `gh pr checks --watch` exits with "no checks reported" if run too early.
+for _ in $(seq 30); do
+  n=$(gh pr view "$pr_url" --json statusCheckRollup -q '.statusCheckRollup | length')
+  [ "$n" -gt 0 ] && break
+  sleep 10
+done
+[ "$n" -gt 0 ] || { echo "ERROR: no CI checks registered on $pr_url after 5 min"; exit 1; }
+
+gh pr checks "$pr_url" --watch --fail-fast --interval 30
+```
+
+**If the watch exits non-zero (a check failed):**
+- Do **not** merge. Leave the PR and branch open.
+- Show the failing check and the tail of its log:
+  `gh run view <run-id> --log-failed | tail -50` (get `<run-id>` from `gh pr checks "$pr_url"`).
+- Stop and report the PR URL plus the failure to the user.
+
+**If all checks pass:**
+
+```bash
+# Squash matches the repo history (one "chore: bump ... (#N)" commit per release).
+gh pr merge "$pr_url" --squash --delete-branch
+git switch main
+git pull --ff-only origin main
+echo "Merged: $pr_url"
+```
+
+`--delete-branch` removes the release branch on origin and locally. If `gh pr merge` fails (for example, branch protection or a merge conflict), stop and report it. Do not use `--admin` to bypass protection.
