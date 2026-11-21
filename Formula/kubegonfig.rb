@@ -5,23 +5,23 @@ class Kubegonfig < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.9/kubegonfig-darwin-arm64"
-      sha256 "3ca4da726b71cfdea4a202368db5b66b33184abd1c986193fd5015b1ac088585"
+      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.10/kubegonfig-darwin-arm64"
+      sha256 "6f258d70e3c9810a31d2c130d23d83c83e0d029b9348fb0000d0c7399e4db9e7"
     end
     on_intel do
-      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.9/kubegonfig-darwin-amd64"
-      sha256 "3961fb6b55999962cc178f4ba18e6ac1ebb089209cb5f769239c530199dcba07"
+      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.10/kubegonfig-darwin-amd64"
+      sha256 "4b863b3e20d1e111a3678f7d5a95891f281e3ebc172d2368f6da3d3fb44c7bdc"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.9/kubegonfig-linux-arm64"
-      sha256 "56e94040a7635bf439cd210d88c1cd696654782149858c992b2ed1166a6b1e83"
+      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.10/kubegonfig-linux-arm64"
+      sha256 "19b4063a2aee9cc8d2e71b8aa10dd7299fd13478f4311dbe80d5f17ccf3b80b8"
     end
     on_intel do
-      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.9/kubegonfig-linux-amd64"
-      sha256 "8296bbfe2a99c93d134b6e6134d735c8fb9be615fddd4dc7b1c51852d82fc671"
+      url "https://github.com/al-bashkir/kubegonfig/releases/download/v0.10/kubegonfig-linux-amd64"
+      sha256 "e36b7dd5c20f70ea6e39407a89459a7bd3faee867c342763780c95a83e4633cb"
     end
   end
 
