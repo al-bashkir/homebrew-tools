@@ -1,6 +1,6 @@
 ---
 name: release
-description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui, rustow) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR, watches CI and squash-merges it when green. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, pulp-tui, or rustow into the Homebrew tap.
+description: Bump al-bashkir/homebrew-tools formulae (envio, sshelf, kubegonfig, pulp-tui, rustow, duckpond) when upstream publishes new releases. Detects new versions via GitHub Releases API, fetches per-platform assets (tarballs or bare binaries), recomputes SHA256s, edits formulae (including envio macOS-Intel auto-promotion), lints with brew style + audit, opens a single combined PR, watches CI and squash-merges it when green. Trigger when user wants to release new upstream versions of envio, sshelf, kubegonfig, pulp-tui, rustow, or duckpond into the Homebrew tap.
 ---
 
 # release
@@ -9,13 +9,14 @@ Procedure to bump one or more formulae in `al-bashkir/homebrew-tools` to match t
 
 ## Inputs
 
-- `$ARGUMENTS` — optional. One of: `envio`, `sshelf`, `kubegonfig`, `pulp-tui`, `rustow`, or empty.
+- `$ARGUMENTS` — optional. One of: `envio`, `sshelf`, `kubegonfig`, `pulp-tui`, `rustow`, `duckpond`, or empty.
   - Empty: check all formulae.
   - `envio`: bump envio only.
   - `sshelf`: bump sshelf only.
   - `kubegonfig`: bump kubegonfig only.
   - `pulp-tui`: bump pulp-tui only.
   - `rustow`: bump rustow only.
+  - `duckpond`: bump duckpond only.
 
 ## Procedure
 
@@ -80,14 +81,15 @@ Parse the optional argument into the `formulae` array. Empty arg = all formulae.
 # $ARGUMENTS is substituted by the skill harness before bash sees it.
 arg="${ARGUMENTS:-}"
 case "$arg" in
-  "")          formulae=(envio sshelf kubegonfig pulp-tui rustow) ;;
+  "")          formulae=(envio sshelf kubegonfig pulp-tui rustow duckpond) ;;
   envio)       formulae=(envio) ;;
   sshelf)     formulae=(sshelf) ;;
   kubegonfig)  formulae=(kubegonfig) ;;
   pulp-tui)    formulae=(pulp-tui) ;;
   rustow)      formulae=(rustow) ;;
+  duckpond)    formulae=(duckpond) ;;
   *)
-    echo "ERROR: invalid argument '$arg'. Valid: envio | sshelf | kubegonfig | pulp-tui | rustow | (empty)"
+    echo "ERROR: invalid argument '$arg'. Valid: envio | sshelf | kubegonfig | pulp-tui | rustow | duckpond | (empty)"
     exit 1
     ;;
 esac
@@ -105,6 +107,7 @@ declare -A upstream_repo=(
   [kubegonfig]="al-bashkir/kubegonfig"
   [pulp-tui]="al-bashkir/pulp-tui"
   [rustow]="al-bashkir/rustow"
+  [duckpond]="al-bashkir/duckpond"
 )
 declare -A current_ver
 declare -A new_ver
@@ -121,7 +124,7 @@ for f in "${formulae[@]}"; do
     kubegonfig)
       cur=$(grep -oE 'releases/download/v[0-9]+(\.[0-9]+)*' Formula/kubegonfig.rb | head -1 | sed 's|.*/v||')
       ;;
-    pulp-tui|rustow)
+    pulp-tui|rustow|duckpond)
       cur=$(grep -oE 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' "Formula/$f.rb" | head -1 | sed 's|.*/v||')
       ;;
   esac
@@ -252,6 +255,36 @@ for f in pulp-tui rustow; do
     exit 1
   fi
 done
+```
+
+## Asset fetch — duckpond
+
+Runs only if `duckpond` is in `to_bump`. Upstream ships **two** tarballs: `duckpond-v<X>-{aarch64-apple-darwin,x86_64-unknown-linux-musl}.tar.gz` (plus `SHA256SUMS`). Each holds `duckpond-v<X>-<triple>/{duckpond,LICENSE,README.md}`. SHA256s come from the GitHub asset `digest` field.
+
+The formula has **two** stub blocks: `on_macos > on_intel` (gated by `depends_on arch: :arm64`) and `on_linux > on_arm` (gated by `depends_on arch: :x86_64`). If upstream starts shipping any other tarball (for example `aarch64-unknown-linux-musl`), **stop and tell the user** — stub promotion is not automated. To promote by hand, follow the pulp-tui v0.1.1 commit (`c4f7930`): replace the stub URL/sha256 and drop the matching arch dep.
+
+```bash
+if printf '%s\n' "${to_bump[@]}" | grep -qx duckpond; then
+  v=${new_ver[duckpond]}
+  declare -A duck_sha
+
+  rel_json=$(gh api "repos/al-bashkir/duckpond/releases/tags/v${v}")
+  for triple in aarch64-apple-darwin x86_64-unknown-linux-musl; do
+    digest=$(jq -r --arg n "duckpond-v${v}-${triple}.tar.gz" '.assets[] | select(.name==$n) | .digest' <<<"$rel_json")
+    sha=${digest#sha256:}
+    [ -n "$sha" ] && [ "$sha" != "null" ] || { echo "ERROR: duckpond asset/digest missing: $triple"; exit 1; }
+    duck_sha[$triple]=$sha
+    echo "duckpond $triple: $sha"
+  done
+
+  extra=$(jq -r --arg p "duckpond-v${v}-" '.assets[].name | select(endswith(".tar.gz"))
+    | select(. != "\($p)aarch64-apple-darwin.tar.gz" and . != "\($p)x86_64-unknown-linux-musl.tar.gz")' <<<"$rel_json")
+  if [ -n "$extra" ]; then
+    echo "ERROR: duckpond has new target tarballs; promote the matching stub block by hand:"
+    echo "$extra"
+    exit 1
+  fi
+fi
 ```
 
 ## Formula edit — envio
@@ -444,6 +477,44 @@ for f in pulp-tui rustow; do
 done
 ```
 
+## Formula edit — duckpond
+
+Use the Edit tool against `Formula/duckpond.rb`; use `sed -i` only as a fallback. Same URL shape as pulp-tui (`.../download/v<X>/duckpond-v<X>-<triple>.tar.gz`), **no** `version` declaration.
+
+**Substitutions (run only if duckpond in `to_bump`):**
+
+1. Bump the literal version in every URL line: replace `v${current_ver[duckpond]}` with `v${new_ver[duckpond]}` everywhere it appears.
+
+2. Replace each `sha256 "..."` line. Each stub mirrors the supported asset of the same OS:
+   - `on_macos do > on_arm do` → `duck_sha[aarch64-apple-darwin]`
+   - `on_macos do > on_intel do` (stub) → `duck_sha[aarch64-apple-darwin]`
+   - `on_linux do > on_arm do` (stub) → `duck_sha[x86_64-unknown-linux-musl]`
+   - `on_linux do > on_intel do` → `duck_sha[x86_64-unknown-linux-musl]`
+
+   Leave both arch deps and the stub-explainer comment intact.
+
+3. **Sanity asserts after edits:**
+
+```bash
+if printf '%s\n' "${to_bump[@]}" | grep -qx duckpond; then
+  file=Formula/duckpond.rb
+  if grep -E '^[[:space:]]*url ' "$file" | grep -q "v${current_ver[duckpond]}"; then
+    echo "ERROR: leftover old version v${current_ver[duckpond]} in duckpond URL line"
+    grep -nE '^[[:space:]]*url ' "$file"
+    exit 1
+  fi
+  if grep -qE '^[[:space:]]*version "' "$file"; then
+    echo "ERROR: duckpond declares an explicit version; brew audit flags it as redundant"; exit 1
+  fi
+  [ "$(grep -cE '^[[:space:]]*sha256 ' "$file")" = "4" ] || { echo "ERROR: duckpond sha256 line count != 4"; exit 1; }
+  [ "$(grep -cE '^[[:space:]]*url ' "$file")" = "4" ] || { echo "ERROR: duckpond url line count != 4"; exit 1; }
+  if [ "$(grep -c 'depends_on arch:' "$file")" != "2" ]; then
+    echo "ERROR: duckpond must keep two arch deps (arm64 on macOS, x86_64 on Linux)"; exit 1
+  fi
+  echo "duckpond formula edits OK"
+fi
+```
+
 ## Lint
 
 Run `brew style` and `brew audit --strict --new` per touched formula. On any failure, stop the procedure, leave edits unstaged, and surface the failing command + tail of output to the user.
@@ -561,6 +632,12 @@ body_file=$(mktemp)
         echo "- aarch64-unknown-linux-musl: \`${trio_sha[$f/aarch64-unknown-linux-musl]}\`"
         echo "- x86_64-unknown-linux-musl: \`${trio_sha[$f/x86_64-unknown-linux-musl]}\`"
         echo "- macOS Intel: stub (\`depends_on arch: :arm64\` still in effect)"
+        ;;
+      duckpond)
+        echo "- aarch64-apple-darwin: \`${duck_sha[aarch64-apple-darwin]}\`"
+        echo "- x86_64-unknown-linux-musl: \`${duck_sha[x86_64-unknown-linux-musl]}\`"
+        echo "- macOS Intel: stub (\`depends_on arch: :arm64\` still in effect)"
+        echo "- Linux arm64: stub (\`depends_on arch: :x86_64\` still in effect)"
         ;;
     esac
     echo
