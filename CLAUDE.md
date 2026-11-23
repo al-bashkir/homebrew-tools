@@ -11,7 +11,7 @@ Standard Homebrew third-party tap (`al-bashkir/tools`) shipping six prebuilt-bin
 - `Formula/kubegonfig.rb` — Kubernetes-config tool from `al-bashkir/kubegonfig`. Per-platform **bare binaries** (no tarball) pulled from the upstream release assets.
 - `Formula/pulp-tui.rb` — Rust TUI for Pulp 3 from `al-bashkir/pulp-tui`. Three tarballs (macOS arm64, Linux arm64 + x86_64 musl); see "pulp-tui specifics".
 - `Formula/rustow.rb` — Rust dotfiles manager from `al-bashkir/rustow`. Same three tarball targets as pulp-tui, plus shell completions inside the tarball; see "rustow specifics".
-- `Formula/duckpond.rb` — Rust encrypted env-var profile tool from `al-bashkir/duckpond`. Two tarballs only (macOS arm64, Linux x86_64 musl); see "duckpond specifics".
+- `Formula/duckpond.rb` — Rust encrypted env-var profile tool from `al-bashkir/duckpond`. Three tarballs (macOS arm64, Linux arm64 + x86_64 musl); see "duckpond specifics".
 
 Users install with `brew install al-bashkir/tools/<formula>`. **No Homebrew bottles, no `brew pr-pull`.** The prebuilt binary downloaded from the upstream release IS the precompiled artifact.
 
@@ -122,7 +122,7 @@ None of the three formulae declares `version` — brew scans the version out of 
 | kubegonfig | yes         | yes          | yes          | yes         |
 | pulp-tui   | yes         | **no**       | yes          | yes         |
 | rustow     | yes         | **no**       | yes          | yes         |
-| duckpond   | yes         | **no**       | yes          | **no**      |
+| duckpond   | yes         | **no**       | yes          | yes         |
 
 envio macOS Intel is intentionally unsupported — upstream `CICD.yml` does not build that target. The formula declares `depends_on arch: :arm64` inside `on_macos do ... end`, so brew refuses the install on x86_64-apple-darwin before fetching anything. The `on_intel` block inside `on_macos` exists only as a syntax stub (reuses the arm64 URL) because `brew test-bot --only-tap-syntax` iterates every macOS version, including Intel-only ones, and a missing URL would fail tap-syntax with `formula requires at least a URL`. The arch dep gates real installs; the stub URL is never fetched. Once upstream CI starts producing an `x86_64-apple-darwin` asset, drop `depends_on arch: :arm64` and replace the stub URL/sha256 with the real ones.
 
@@ -191,17 +191,17 @@ This means `brew linkage --test al-bashkir/tools/envio` on Linux always reports 
 - License **MIT**. No `version` declaration — brew parses it from the filename. URLs hard-code the version literal.
 - `rustow --version` prints `rustow <X>` (no `v`); the `test do` block matches on it.
 - SHA256s come from the GitHub asset `digest` field, same as kubegonfig.
-- The `release` skill handles pulp-tui and rustow with one shared fetch/edit section, because both have the same release shape.
+- The `release` skill handles pulp-tui, rustow and duckpond with one shared fetch/edit section, because all three have the same release shape.
 
 ### duckpond specifics
 
-- Upstream ships two tarballs: `duckpond-v<X>-{aarch64-apple-darwin,x86_64-unknown-linux-musl}.tar.gz` (plus `SHA256SUMS`). Each has one top-level dir `duckpond-v<X>-<triple>/` with the `duckpond` binary, `README.md` and `LICENSE`. No man page, no completion files.
-- Two platform gaps, same pattern as pulp-tui v0.1.0: `depends_on arch: :arm64` inside `on_macos` and `depends_on arch: :x86_64` inside `on_linux`. The `on_macos > on_intel` and `on_linux > on_arm` blocks are stubs that reuse the supported URL of the same OS. When upstream adds a target, replace that stub URL/sha256 and drop its arch dep.
+- Upstream ships three tarballs: `duckpond-v<X>-{aarch64-apple-darwin,aarch64-unknown-linux-musl,x86_64-unknown-linux-musl}.tar.gz` (plus `SHA256SUMS`; Linux arm64 added in v0.1.2). Each has one top-level dir `duckpond-v<X>-<triple>/` with the `duckpond` binary, `README.md` and `LICENSE`. No man page, no completion files.
+- One platform gap, same pattern as pulp-tui: `depends_on arch: :arm64` inside `on_macos`. The `on_macos > on_intel` block is a syntax stub that reuses the arm64 URL. When upstream adds `x86_64-apple-darwin`, replace the stub URL/sha256 and drop the arch dep.
 - No completions in the formula. `duckpond init <bash|zsh|fish>` prints a shell wrapper function **and** completion together, so it is not a plain completion script and must not go through `generate_completions_from_executable`. Users add `eval "$(duckpond init zsh)"` to their shell rc.
 - GPG profiles need `gpg` on `PATH`; age passphrase profiles do not. No `depends_on "gnupg"` — it is optional, same reasoning as envio on Linux. Linux binary is static musl.
 - License **MIT**. No `version` declaration. URLs hard-code the version literal.
 - `duckpond --version` prints `duckpond <X>` (no `v`); the `test do` block matches on it.
-- SHA256s come from the GitHub asset `digest` field. The `release` skill has a separate duckpond fetch/edit section (two tarballs, two stubs).
+- SHA256s come from the GitHub asset `digest` field. The `release` skill handles duckpond in the shared pulp-tui/rustow fetch/edit sections (same release shape).
 
 ### CI workflows
 
