@@ -11,23 +11,23 @@ class Duckpond < Formula
     depends_on arch: :arm64
 
     on_arm do
-      url "https://github.com/al-bashkir/duckpond/releases/download/v0.1.3/duckpond-v0.1.3-aarch64-apple-darwin.tar.gz"
-      sha256 "27b96c7827d02f954c83c539df4e7004408b305bbf63203f168d98467d917925"
+      url "https://github.com/al-bashkir/duckpond/releases/download/v0.2.0/duckpond-v0.2.0-aarch64-apple-darwin.tar.gz"
+      sha256 "507c96305158aaa49f206a9123ddd7f9c6bf941aee8010fee28c03a7eca02b2b"
     end
     on_intel do
-      url "https://github.com/al-bashkir/duckpond/releases/download/v0.1.3/duckpond-v0.1.3-aarch64-apple-darwin.tar.gz"
-      sha256 "27b96c7827d02f954c83c539df4e7004408b305bbf63203f168d98467d917925"
+      url "https://github.com/al-bashkir/duckpond/releases/download/v0.2.0/duckpond-v0.2.0-aarch64-apple-darwin.tar.gz"
+      sha256 "507c96305158aaa49f206a9123ddd7f9c6bf941aee8010fee28c03a7eca02b2b"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/al-bashkir/duckpond/releases/download/v0.1.3/duckpond-v0.1.3-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "bce897775606c1de5ea7a8f23220d4501ed5c7dc153e020e3bd0927bbb126efa"
+      url "https://github.com/al-bashkir/duckpond/releases/download/v0.2.0/duckpond-v0.2.0-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "46667d163d3434299f1c87a736429b14adbebf0838e18232c7c3b9099c25815a"
     end
     on_intel do
-      url "https://github.com/al-bashkir/duckpond/releases/download/v0.1.3/duckpond-v0.1.3-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "6ca4239d764f644a0dad43b060beacadfb6aa7bafd33ed4731376a0c27c33bcc"
+      url "https://github.com/al-bashkir/duckpond/releases/download/v0.2.0/duckpond-v0.2.0-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "5ae0f0051890c33e13f4f953bfa45a62c765b2ab480a8305a750aca8fd146987"
     end
   end
 
